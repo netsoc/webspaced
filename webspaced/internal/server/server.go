@@ -38,6 +38,11 @@ func (s *Server) Start(sockPath string) error {
 	return s.http.Serve(listener)
 }
 
+// Stop shuts down the server and listener
+func (s *Server) Stop() error {
+	return s.http.Close()
+}
+
 func (s *Server) index(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, "hello, world!\n")
 }
