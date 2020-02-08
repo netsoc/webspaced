@@ -3,3 +3,5 @@ services:
   app:
     image: netsoc/webspaced
     build: .
+    volumes:
+      - ./sockets:/run/webspaced

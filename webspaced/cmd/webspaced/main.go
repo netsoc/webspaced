@@ -1,9 +1,12 @@
 package main
 
 import (
-	"fmt"
+	"log"
+
+	"github.com/netsoc/webspace-ng/webspaced/internal/server"
 )
 
 func main() {
-	fmt.Println("hello, world!")
+	srv := server.NewServer()
+	log.Fatal(srv.Start("/run/webspaced/server.sock"))
 }

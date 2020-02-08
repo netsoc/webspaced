@@ -1,7 +1,7 @@
 FROM golang:1.13-alpine as builder
 
 WORKDIR /usr/local/src
-COPY go.* .
+COPY go.* ./
 RUN go mod download
 
 COPY . .
