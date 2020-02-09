@@ -5,6 +5,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.dev
+    environment:
+      - LXD_SOCKET=/run/lxd.sock
     volumes:
       - .:/usr/local/webspaced
       - ./sockets:/run/webspaced
+      - /var/lib/lxd/unix.socket:/run/lxd.sock
