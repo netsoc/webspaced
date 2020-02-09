@@ -20,5 +20,6 @@ func main() {
 		srv.Stop()
 	}()
 
+	log.Println("Starting server...")
 	log.Fatal(srv.Start("/run/webspaced/server.sock"))
 }
