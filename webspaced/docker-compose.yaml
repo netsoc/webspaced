@@ -1,0 +1,10 @@
+version: '3'
+services:
+  app:
+    image: netsoc/webspaced:dev
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    volumes:
+      - .:/usr/local/webspaced
+      - ./sockets:/run/webspaced

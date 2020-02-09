@@ -1,0 +1,7 @@
+FROM golang:1.13-alpine
+RUN apk --no-cache add git && go get github.com/githubnemo/CompileDaemon
+
+WORKDIR /usr/local/webspaced
+
+CMD ["CompileDaemon", "-exclude-dir=.git", "-build=go build -o bin/webspaced ./cmd/...", "-command=bin/webspaced", \
+    "-graceful-kill"]
