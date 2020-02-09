@@ -1,7 +1,7 @@
 version: '3'
 services:
   app:
-    image: netsoc/webspaced:dev
+    image: netsoc/webspace-ng/webspaced:dev
     build:
       context: .
       dockerfile: Dockerfile.dev

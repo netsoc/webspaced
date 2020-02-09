@@ -1,0 +1,11 @@
+version: '3'
+services:
+  app:
+    image: netsoc/webspace-ng/gui
+    build: .
+    environment:
+      - DEBUG=yes
+    volumes:
+      - ./webspace_ng:/opt/webspace_ng:ro
+    ports:
+      - 8080:80
