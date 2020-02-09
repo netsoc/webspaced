@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"os"
 
 	"github.com/gorilla/mux"
 )
@@ -31,6 +32,12 @@ func NewServer() *Server {
 // Start begins listening
 func (s *Server) Start(sockPath string) error {
 	listener, err := net.Listen("unix", sockPath)
+	if err != nil {
+		return err
+	}
+
+	// Socket needs to be u=rw,g=rw,o=rw so anyone can access it (we'll do auth later)
+	err = os.Chmod(sockPath, 0o666)
 	if err != nil {
 		return err
 	}
