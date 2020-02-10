@@ -9,6 +9,7 @@ import (
 
 	"github.com/gorilla/mux"
 	lxd "github.com/lxc/lxd/client"
+	lxdApi "github.com/lxc/lxd/shared/api"
 )
 
 // Server is the main webspaced server struct
@@ -41,6 +42,13 @@ func (s *Server) Start(sockPath string) error {
 		return err
 	}
 
+	var l *lxd.EventListener
+	l, err = s.lxd.GetEvents()
+	if err != nil {
+		return err
+	}
+	l.AddHandler([]string{"lifecycle"}, s.onLxdEvent)
+
 	listener, err := net.Listen("unix", sockPath)
 	if err != nil {
 		return err
@@ -61,6 +69,12 @@ func (s *Server) Start(sockPath string) error {
 // Stop shuts down the server and listener
 func (s *Server) Stop() error {
 	return s.http.Close()
+}
+
+func (s *Server) onLxdEvent(e lxdApi.Event) {
+	var details map[string]interface{}
+	json.Unmarshal(e.Metadata, &details)
+	fmt.Println(details)
 }
 
 func (s *Server) index(w http.ResponseWriter, r *http.Request) {
