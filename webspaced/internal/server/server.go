@@ -52,7 +52,10 @@ func (s *Server) Start(sockPath string) error {
 		return err
 	}
 
-	return s.http.Serve(listener)
+	if err := s.http.Serve(listener); err != http.ErrServerClosed {
+		return err
+	}
+	return nil
 }
 
 // Stop shuts down the server and listener
