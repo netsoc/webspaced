@@ -1,14 +1,19 @@
 package main
 
 import (
-	"log"
 	"os"
 	"os/signal"
 
 	"github.com/netsoc/webspace-ng/webspaced/internal/server"
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 )
 
+func init() {
+	if val := os.Getenv("DEBUG"); val != "" {
+		log.SetLevel(log.DebugLevel)
+	}
+}
 func main() {
 	srv := server.NewServer()
 
@@ -16,10 +21,12 @@ func main() {
 	signal.Notify(sigs, unix.SIGINT, unix.SIGTERM)
 
 	go func() {
-		<-sigs
-		srv.Stop()
+		log.Info("Starting server...")
+		if err := srv.Start("/run/webspaced/server.sock"); err != nil {
+			log.WithField("error", err).Fatal("Failed to start server")
+		}
 	}()
 
-	log.Println("Starting server...")
-	log.Fatal(srv.Start("/run/webspaced/server.sock"))
+	<-sigs
+	srv.Stop()
 }

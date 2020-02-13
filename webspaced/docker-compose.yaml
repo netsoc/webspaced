@@ -5,6 +5,12 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.dev
+    environment:
+      - LXD_SOCKET=/run/lxd.sock
+      - DEBUG=1
     volumes:
       - .:/usr/local/webspaced
       - ./sockets:/run/webspaced
+      # If you installed LXD via Snap, use the following instead!
+      #- /var/snap/lxd/common/lxd/unix.socket:/run/lxd.sock
+      - /var/lib/lxd/unix.socket:/run/lxd.sock

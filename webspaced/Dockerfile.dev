@@ -1,5 +1,5 @@
 FROM golang:1.13-alpine
-RUN apk --no-cache add git && go get github.com/githubnemo/CompileDaemon
+RUN apk --no-cache add git gcc musl-dev && go get github.com/githubnemo/CompileDaemon
 
 WORKDIR /usr/local/webspaced
 
