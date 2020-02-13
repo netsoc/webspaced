@@ -9,4 +9,6 @@ services:
       - LXD_SOCKET=/run/lxd.sock
     volumes:
       - ./sockets:/run/webspaced
+      # If you installed LXD via Snap, use the following instead!
+      #- /var/snap/lxd/common/lxd/unix.socket:/run/lxd.sock
       - /var/lib/lxd/unix.socket:/run/lxd.sock
