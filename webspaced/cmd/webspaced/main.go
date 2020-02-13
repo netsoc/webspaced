@@ -9,6 +9,11 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+func init() {
+	if val := os.Getenv("DEBUG"); val != "" {
+		log.SetLevel(log.DebugLevel)
+	}
+}
 func main() {
 	srv := server.NewServer()
 

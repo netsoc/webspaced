@@ -7,6 +7,7 @@ services:
       dockerfile: Dockerfile.dev
     environment:
       - LXD_SOCKET=/run/lxd.sock
+      - DEBUG=1
     volumes:
       - .:/usr/local/webspaced
       - ./sockets:/run/webspaced

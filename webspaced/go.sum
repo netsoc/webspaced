@@ -48,6 +48,7 @@ github.com/kr/text v0.1.0/go.mod h1:4Jbv+DJW3UT/LiOwJeYQe1efqtUx/iVham/4vfdArNI=
 github.com/lxc/lxd v0.0.0-20200207191204-54c0330ed710 h1:zJA+yWqq7vHhSzl6t3DweCiUwqybJBq6UlJj8WpIUvM=
 github.com/lxc/lxd v0.0.0-20200207191204-54c0330ed710/go.mod h1:2BaZflfwsv8a3uy3/Vw+de4Avn4DSrAiqaHJjCIXMV4=
 github.com/lxc/lxd v0.0.0-20200210042802-c4f27b41f1a5 h1:+a8th4bWlxD2MuAAibpybNUWCMeSFmrizWEJwrSKyhg=
+github.com/lxc/lxd v0.0.0-20200212234227-94339c5ebd09 h1:KcxnU8QpiZKmFqwlAProBJz8duZCkZp6eBwCdlqp03s=
 github.com/mattn/goveralls v0.0.2/go.mod h1:8d1ZMHsd7fW6IRPKQh46F2WRpyib5/X4FOpevwGNQEw=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
 github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=

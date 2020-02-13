@@ -10,6 +10,7 @@ import (
 	"github.com/gorilla/mux"
 	lxd "github.com/lxc/lxd/client"
 	lxdApi "github.com/lxc/lxd/shared/api"
+	log "github.com/sirupsen/logrus"
 )
 
 // Server is the main webspaced server struct
@@ -74,7 +75,10 @@ func (s *Server) Stop() error {
 func (s *Server) onLxdEvent(e lxdApi.Event) {
 	var details map[string]interface{}
 	json.Unmarshal(e.Metadata, &details)
-	fmt.Println(details)
+	log.WithFields(log.Fields{
+		"type":    e.Type,
+		"details": details,
+	}).Debug("lxd event")
 }
 
 func (s *Server) index(w http.ResponseWriter, r *http.Request) {
