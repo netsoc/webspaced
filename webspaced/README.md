@@ -1,6 +1,8 @@
 # Backend
 This repository contains the backend portion of `webspace-ng`, which talks to LXD to manage containers.
 
+REST API documentation can be found [here](api.md).
+
 ## Developing
 A Linux system is required.
 
