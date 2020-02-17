@@ -49,6 +49,7 @@ github.com/lxc/lxd v0.0.0-20200207191204-54c0330ed710 h1:zJA+yWqq7vHhSzl6t3DweCi
 github.com/lxc/lxd v0.0.0-20200207191204-54c0330ed710/go.mod h1:2BaZflfwsv8a3uy3/Vw+de4Avn4DSrAiqaHJjCIXMV4=
 github.com/lxc/lxd v0.0.0-20200210042802-c4f27b41f1a5 h1:+a8th4bWlxD2MuAAibpybNUWCMeSFmrizWEJwrSKyhg=
 github.com/lxc/lxd v0.0.0-20200212234227-94339c5ebd09 h1:KcxnU8QpiZKmFqwlAProBJz8duZCkZp6eBwCdlqp03s=
+github.com/lxc/lxd v0.0.0-20200217182532-0e3f3dacd100 h1:5EHuNmDtuPSNJ7ihlTxwCfzhzsCheCVCTNQTq4fc3lo=
 github.com/mattn/goveralls v0.0.2/go.mod h1:8d1ZMHsd7fW6IRPKQh46F2WRpyib5/X4FOpevwGNQEw=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
 github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
@@ -76,6 +77,7 @@ golang.org/x/sys v0.0.0-20190412213103-97732733099d/go.mod h1:h1NjWce9XRLGQEsW7w
 golang.org/x/sys v0.0.0-20190422165155-953cdadca894/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20200202164722-d101bd2416d5 h1:LfCXLvNmTYH9kEmVgqbnsWfruoXZIrh4YBgqVHtDvw0=
 golang.org/x/sys v0.0.0-20200202164722-d101bd2416d5/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
+golang.org/x/sys v0.0.0-20200217220822-9197077df867 h1:JoRuNIf+rpHl+VhScRQQvzbHed86tKkqwPMV34T8myw=
 golang.org/x/text v0.3.0/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=
 golang.org/x/tools v0.0.0-20181008205924-a2b3f7f249e9/go.mod h1:n7NCudcB/nEzxVGmLbDWY5pfWTLqBcC2KZ6jyYvM4mQ=
 golang.org/x/tools v0.0.0-20181221001348-537d06c36207/go.mod h1:n7NCudcB/nEzxVGmLbDWY5pfWTLqBcC2KZ6jyYvM4mQ=
