@@ -13,6 +13,19 @@ In an error scenario, an endpoint will return an appropriate 4XX (client error) 
 with a JSON object containing a `message` string for display to a user. Additional fields _may_ be provided.
 
 # Endpoints
+## `/v1/images`
+### GET
+Obtain a list of available images.
+
+Response:
+
+HTTP 200 and a list of objects containing the following properties from the response
+[here](https://github.com/lxc/lxd/blob/master/doc/rest-api.md#get-optional-secretsecret):
+ - `aliases`
+ - `fingerprint`
+ - `properties`
+ - `size`
+
 ## `/v1/webspace`
 ### POST
 Initialize the user's webspace.
