@@ -1,3 +1,3 @@
 /bin/*
 !/bin/.gitkeep
-/passwd_groups_server
+/pw_gr_proxy
