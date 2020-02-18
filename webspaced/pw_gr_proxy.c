@@ -1,3 +1,4 @@
+#include <stdbool.h>
 #include <stdint.h>
 #include <inttypes.h>
 #include <string.h>
@@ -6,17 +7,25 @@
 #include <signal.h>
 #include <unistd.h>
 #include <pwd.h>
+#include <grp.h>
 #include <sys/types.h>
 #include <sys/select.h>
 #include <sys/signalfd.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 
-#define REQ_GETPWNAM 0
-#define REQ_GETGRNAM 1
+#define REQ_GETPWUID        0
+#define REQ_USER_IS_MEMBER  1
 
 #define RES_OK  0
 #define RES_ERR 1
+
+void send_error(int sock) {
+    uint8_t data = RES_ERR;
+    if (send(sock, &data, 1, 0) == -1) {
+        perror("sendto()");
+    }
+}
 
 typedef struct req {
     int sock;
@@ -34,13 +43,14 @@ void handle_req(req_t *r) {
         return;
     }
 
-    if (n != 5) {
-        fprintf(stderr, "ignoring request with invalid length %zd from \"%s\"\n", read, r->src.sun_path);
-        return;
-    }
 
     uint8_t req_type = data[0];
-    if (req_type == REQ_GETPWNAM) {
+    if (req_type == REQ_GETPWUID) {
+        if (n != 5) {
+            fprintf(stderr, "ignoring getpwuid request with invalid length %zd from \"%s\"\n", read, r->src.sun_path);
+            return;
+        }
+
         uid_t uid = ((uid_t *)(data + 1))[0];
 #ifdef DEBUG
         fprintf(stderr, "getting passwd entry for uid %" PRIu32 " on behalf of \"%s\"\n", uid, r->src.sun_path);
@@ -48,10 +58,8 @@ void handle_req(req_t *r) {
         struct passwd *p_entry = getpwuid(uid);
         if (p_entry == NULL) {
             perror("getpwuid()");
-            data[0] = RES_ERR;
-            if (send(r->sock, data, 1, 0) == -1) {
-                perror("sendto()");
-            }
+            send_error(r->sock);
+            return;
         }
 
 #ifdef DEBUG
@@ -60,7 +68,34 @@ void handle_req(req_t *r) {
         data[0] = RES_OK;
         strcpy(data + 1, p_entry->pw_name);
         if (send(r->sock, data, 1 + strlen(p_entry->pw_name), 0) == -1) {
-            perror("sendto()");
+            perror("send()");
+        }
+    } else if (req_type == REQ_USER_IS_MEMBER) {
+        char *username = (char*)(data + 1);
+        char *group = username + strlen(username) + 1;
+#ifdef DEBUG
+        fprintf(stderr, "checking if \"%s\" is a member of \"%s\" on behalf of \"%s\"\n", username, group, r->src.sun_path);
+#endif
+
+        struct group *gr = getgrnam(group);
+        if (gr == NULL) {
+            perror("getgrnam()");
+            send_error(r->sock);
+            return;
+        }
+
+        bool is_mem = false;
+        for (char **p = gr->gr_mem; *p != NULL; p++) {
+            if (strcmp(*p, username) == 0) {
+                is_mem = true;
+                break;
+            }
+        }
+
+        data[0] = RES_OK;
+        data[1] = is_mem;
+        if (send(r->sock, data, 2, 0) == -1) {
+            perror("send()");
         }
     } else {
         fprintf(stderr, "ignoring invalid request type '%" PRIu8 "' from \"%s\"\n", req_type, r->src.sun_path);
