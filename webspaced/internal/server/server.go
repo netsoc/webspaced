@@ -116,8 +116,7 @@ func NewServer() *Server {
 	s := &Server{
 		http: httpSrv,
 	}
-	r.HandleFunc("/", s.index)
-	r.HandleFunc("/containers", s.containers)
+	r.HandleFunc("/v1/images", s.apiImages).Methods("GET")
 
 	return s
 }
@@ -170,18 +169,4 @@ func (s *Server) onLxdEvent(e lxdApi.Event) {
 		"type":    e.Type,
 		"details": details,
 	}).Debug("lxd event")
-}
-
-func (s *Server) index(w http.ResponseWriter, r *http.Request) {
-	u := r.Context().Value(keyUser).(string)
-	JSONResponse(w, map[string]string{"user": u}, http.StatusOK)
-}
-func (s *Server) containers(w http.ResponseWriter, r *http.Request) {
-	list, err := s.lxd.GetContainers()
-	if err != nil {
-		JSONErrResponse(w, err, http.StatusInternalServerError)
-		return
-	}
-
-	JSONResponse(w, list, http.StatusOK)
 }
