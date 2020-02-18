@@ -19,7 +19,8 @@ import (
 type key int
 
 const (
-	keyPcred key = iota
+	keyPwGrProxy key = iota
+	keyPcred
 	keyUser
 )
 
@@ -64,20 +65,31 @@ func JSONErrResponse(w http.ResponseWriter, err error, statusCode int) {
 // UserMiddleware is a middleware for resolving Unix socket peer credentials to a name
 func UserMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		pwGrProxy := r.Context().Value(keyPwGrProxy).(*PwGrProxy)
 		pcred := r.Context().Value(keyPcred).(*unix.Ucred)
+
+		username, err := pwGrProxy.LookupUID(pcred.Uid)
+		if err != nil {
+			username = fmt.Sprintf("u%v", pcred.Uid)
+			log.WithFields(log.Fields{
+				"err":      err,
+				"fallback": username,
+			}).Warn("Coudln't find username for UID, using fallback")
+		}
+
 		// TODO: check for membership of `webspace-admin` group
 		if pcred.Uid == 0 {
-			// TODO: use host passwd / groups proxy to resolve name
-			u := "root"
 			if reqUser := r.Header.Get("X-Webspace-User"); reqUser != "" {
-				u = reqUser
+				username = reqUser
 			}
 
-			r = r.WithContext(context.WithValue(r.Context(), keyUser, u))
+			r = r.WithContext(context.WithValue(r.Context(), keyUser, username))
 			next.ServeHTTP(w, r)
 		} else {
 			JSONErrResponse(w, errors.New("Only root can execute commands right now"), http.StatusNotImplemented)
 		}
+
+		log.WithField("username", username).Trace("User authenticated")
 	})
 }
 
@@ -106,10 +118,14 @@ func NewServer() *Server {
 }
 
 // Start begins listening
-func (s *Server) Start(sockPath string) error {
+func (s *Server) Start(sockPath string, pwGrSockPath string) error {
+	pwGrProxy := NewPwGrProxy(pwGrSockPath)
+	s.http.BaseContext = func(_ net.Listener) context.Context {
+		return context.WithValue(context.Background(), keyPwGrProxy, pwGrProxy)
+	}
+
 	var err error
-	s.lxd, err = lxd.ConnectLXDUnix("", nil)
-	if err != nil {
+	if s.lxd, err = lxd.ConnectLXDUnix("", nil); err != nil {
 		return err
 	}
 

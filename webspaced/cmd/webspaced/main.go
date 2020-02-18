@@ -22,7 +22,7 @@ func main() {
 
 	go func() {
 		log.Info("Starting server...")
-		if err := srv.Start("/run/webspaced/server.sock"); err != nil {
+		if err := srv.Start("/run/webspaced/server.sock", "/run/webspaced/pw_gr_proxy.sock"); err != nil {
 			log.WithField("error", err).Fatal("Failed to start server")
 		}
 	}()
