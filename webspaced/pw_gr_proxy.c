@@ -141,6 +141,7 @@ int main(int argc, char **argv) {
             }
 
             handle_req(&req);
+            close(req.sock);
         }
         if (FD_ISSET(sfd, &rfds)) {
             break;
