@@ -12,8 +12,6 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 
-#define DEBUG
-
 #define REQ_GETPWNAM 0
 #define REQ_GETGRNAM 1
 
@@ -22,28 +20,36 @@
 
 typedef struct req {
     int sock;
-    uint8_t data[65536];
-    ssize_t read;
     struct sockaddr_un src;
     socklen_t src_size;
 } req_t;
 void handle_req(req_t *r) {
-    if (r->read != 5) {
-        fprintf(stderr, "ignoring request with invalid length %zd from %s\n", read, r->src.sun_path);
+    uint8_t data[65536];
+    ssize_t n = recv(r->sock, data, sizeof(data), 0);
+    if (n == -1) {
+        perror("recv()");
+        return;
+    } else if (n == 0) {
+        fprintf(stderr, "\"%s\" closed connection unexpectedly", r->src.sun_path);
         return;
     }
 
-    uint8_t req_type = r->data[0];
+    if (n != 5) {
+        fprintf(stderr, "ignoring request with invalid length %zd from \"%s\"\n", read, r->src.sun_path);
+        return;
+    }
+
+    uint8_t req_type = data[0];
     if (req_type == REQ_GETPWNAM) {
-        uid_t uid = ((uid_t *)(r->data + 1))[0];
+        uid_t uid = ((uid_t *)(data + 1))[0];
 #ifdef DEBUG
-        fprintf(stderr, "getting passwd entry for uid %" PRIu32 " on behalf of %s\n", uid, r->src.sun_path);
+        fprintf(stderr, "getting passwd entry for uid %" PRIu32 " on behalf of \"%s\"\n", uid, r->src.sun_path);
 #endif
         struct passwd *p_entry = getpwuid(uid);
         if (p_entry == NULL) {
             perror("getpwuid()");
-            r->data[0] = RES_ERR;
-            if (sendto(r->sock, r->data, 1, 0, (struct sockaddr*)&r->src, r->src_size) == -1) {
+            data[0] = RES_ERR;
+            if (send(r->sock, data, 1, 0) == -1) {
                 perror("sendto()");
             }
         }
@@ -51,13 +57,13 @@ void handle_req(req_t *r) {
 #ifdef DEBUG
         fprintf(stderr, "uid %" PRIu32 " -> user \"%s\"\n", uid, p_entry->pw_name);
 #endif
-        r->data[0] = RES_OK;
-        strcpy(r->data + 1, p_entry->pw_name);
-        if (sendto(r->sock, r->data, 1 + strlen(p_entry->pw_name), 0, (struct sockaddr*)&r->src, r->src_size) == -1) {
+        data[0] = RES_OK;
+        strcpy(data + 1, p_entry->pw_name);
+        if (send(r->sock, data, 1 + strlen(p_entry->pw_name), 0) == -1) {
             perror("sendto()");
         }
     } else {
-        fprintf(stderr, "ignoring invalid request type '%" PRIu8 "' from %s\n", req_type, r->src.sun_path);
+        fprintf(stderr, "ignoring invalid request type '%" PRIu8 "' from \"%s\"\n", req_type, r->src.sun_path);
     }
 }
 
@@ -68,7 +74,7 @@ int main(int argc, char **argv) {
     }
     char *sock_path = argv[1];
 
-    int sock = socket(AF_UNIX, SOCK_DGRAM, 0);
+    int sock = socket(AF_UNIX, SOCK_SEQPACKET, 0);
     if (sock == -1) {
         perror("socket()");
         return -1;
@@ -81,6 +87,12 @@ int main(int argc, char **argv) {
     int ret = 0;
     if (bind(sock, (struct sockaddr*)&bind_addr, sizeof(struct sockaddr_un)) == -1) {
         perror("bind()");
+        ret = -2;
+        goto error_psfd;
+    }
+
+    if (listen(sock, 16) == -1) {
+        perror("listen()");
         ret = -2;
         goto error_psfd;
     }
@@ -119,16 +131,13 @@ int main(int argc, char **argv) {
 
         if (FD_ISSET(sock, &rfds)) {
             req_t req = {0};
-            req.sock = sock;
             req.src_size = sizeof(struct sockaddr_un);
-            req.read = recvfrom(sock, req.data, sizeof(req.data), 0, (struct sockaddr*)&req.src, &req.src_size);
+            req.sock = accept(sock, (struct sockaddr*)&req.src, &req.src_size);
 
-            if (req.read == -1) {
-                perror("recvfrom()");
+            if (req.sock == -1) {
+                perror("accept()");
                 ret = -5;
                 goto error;
-            } else if (req.read == 0) {
-                break;
             }
 
             handle_req(&req);
