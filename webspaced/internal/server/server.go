@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -117,6 +118,7 @@ func NewServer() *Server {
 		http: httpSrv,
 	}
 	r.HandleFunc("/v1/images", s.apiImages).Methods("GET")
+	r.NotFoundHandler = http.HandlerFunc(s.apiNotFound)
 
 	return s
 }
@@ -169,4 +171,8 @@ func (s *Server) onLxdEvent(e lxdApi.Event) {
 		"type":    e.Type,
 		"details": details,
 	}).Debug("lxd event")
+}
+
+func (s *Server) apiNotFound(w http.ResponseWriter, r *http.Request) {
+	JSONErrResponse(w, errors.New("API endpoint not found"), http.StatusNotFound)
 }
