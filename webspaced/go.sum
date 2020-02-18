@@ -50,6 +50,7 @@ github.com/lxc/lxd v0.0.0-20200207191204-54c0330ed710/go.mod h1:2BaZflfwsv8a3uy3
 github.com/lxc/lxd v0.0.0-20200210042802-c4f27b41f1a5 h1:+a8th4bWlxD2MuAAibpybNUWCMeSFmrizWEJwrSKyhg=
 github.com/lxc/lxd v0.0.0-20200212234227-94339c5ebd09 h1:KcxnU8QpiZKmFqwlAProBJz8duZCkZp6eBwCdlqp03s=
 github.com/lxc/lxd v0.0.0-20200217182532-0e3f3dacd100 h1:5EHuNmDtuPSNJ7ihlTxwCfzhzsCheCVCTNQTq4fc3lo=
+github.com/lxc/lxd v0.0.0-20200218194520-770bd9d290ea h1:SrRGWCoNHpBuw6rGEvNdyrQxdaJQg6+OZDuDDTt8km0=
 github.com/mattn/goveralls v0.0.2/go.mod h1:8d1ZMHsd7fW6IRPKQh46F2WRpyib5/X4FOpevwGNQEw=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
 github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=

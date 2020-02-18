@@ -3,7 +3,6 @@ package server
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -77,19 +76,25 @@ func UserMiddleware(next http.Handler) http.Handler {
 			}).Warn("Coudln't find username for UID, using fallback")
 		}
 
+		isAdmin, err := pwGrProxy.UserIsMember(username, "webspace-admin")
+		if err != nil {
+			log.WithFields(log.Fields{
+				"err":   err,
+				"user":  username,
+				"group": "webspace-admin",
+			}).Warn("Failed to check if user is in admin group")
+		}
+
 		// TODO: check for membership of `webspace-admin` group
-		if pcred.Uid == 0 {
+		if isAdmin || pcred.Uid == 0 {
 			if reqUser := r.Header.Get("X-Webspace-User"); reqUser != "" {
 				username = reqUser
 			}
-
-			r = r.WithContext(context.WithValue(r.Context(), keyUser, username))
-			next.ServeHTTP(w, r)
-		} else {
-			JSONErrResponse(w, errors.New("Only root can execute commands right now"), http.StatusNotImplemented)
 		}
 
 		log.WithField("username", username).Trace("User authenticated")
+		r = r.WithContext(context.WithValue(r.Context(), keyUser, username))
+		next.ServeHTTP(w, r)
 	})
 }
 
