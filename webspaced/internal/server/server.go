@@ -19,7 +19,8 @@ import (
 type key int
 
 const (
-	keyPwGrProxy key = iota
+	keyConfig key = iota
+	keyPwGrProxy
 	keyPcred
 	keyUser
 )
@@ -65,6 +66,7 @@ func JSONErrResponse(w http.ResponseWriter, err error, statusCode int) {
 // UserMiddleware is a middleware for resolving Unix socket peer credentials to a name
 func UserMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		config := r.Context().Value(keyConfig).(*Config)
 		pwGrProxy := r.Context().Value(keyPwGrProxy).(*PwGrProxy)
 		pcred := r.Context().Value(keyPcred).(*unix.Ucred)
 
@@ -77,12 +79,12 @@ func UserMiddleware(next http.Handler) http.Handler {
 			}).Warn("Coudln't find username for UID, using fallback")
 		}
 
-		isAdmin, err := pwGrProxy.UserIsMember(username, "webspace-admin")
+		isAdmin, err := pwGrProxy.UserIsMember(username, config.Webspaces.AdminGroup)
 		if err != nil {
 			log.WithFields(log.Fields{
 				"err":   err,
 				"user":  username,
-				"group": "webspace-admin",
+				"group": config.Webspaces.AdminGroup,
 			}).Warn("Failed to check if user is in admin group")
 		}
 
@@ -101,12 +103,13 @@ func UserMiddleware(next http.Handler) http.Handler {
 
 // Server is the main webspaced server struct
 type Server struct {
-	lxd  lxd.InstanceServer
-	http *http.Server
+	Config Config
+	lxd    lxd.InstanceServer
+	http   *http.Server
 }
 
 // NewServer returns an initialized Server
-func NewServer() *Server {
+func NewServer(config Config) *Server {
 	r := mux.NewRouter()
 	r.Use(UserMiddleware)
 	httpSrv := &http.Server{
@@ -115,7 +118,8 @@ func NewServer() *Server {
 	}
 
 	s := &Server{
-		http: httpSrv,
+		Config: config,
+		http:   httpSrv,
 	}
 	r.HandleFunc("/v1/images", s.apiImages).Methods("GET")
 	r.NotFoundHandler = http.HandlerFunc(s.apiNotFound)
@@ -124,15 +128,18 @@ func NewServer() *Server {
 }
 
 // Start begins listening
-func (s *Server) Start(sockPath string, pwGrSockPath string) error {
-	pwGrProxy := NewPwGrProxy(pwGrSockPath)
+func (s *Server) Start() error {
+	pwGrProxy := NewPwGrProxy(s.Config.PwGrProxySocket)
 	s.http.BaseContext = func(_ net.Listener) context.Context {
 		return context.WithValue(context.Background(), keyPwGrProxy, pwGrProxy)
 	}
 
 	var err error
-	if s.lxd, err = lxd.ConnectLXDUnix("", nil); err != nil {
+	if s.lxd, err = lxd.ConnectLXDUnix(s.Config.LXD.Socket, nil); err != nil {
 		return err
+	}
+	if _, _, err := s.lxd.GetNetwork(s.Config.LXD.Network); err != nil {
+		return fmt.Errorf("LXD returned error looking for network %v: %w", s.Config.LXD.Network, err)
 	}
 
 	var l *lxd.EventListener
@@ -142,13 +149,13 @@ func (s *Server) Start(sockPath string, pwGrSockPath string) error {
 	}
 	l.AddHandler([]string{"lifecycle"}, s.onLxdEvent)
 
-	listener, err := net.Listen("unix", sockPath)
+	listener, err := net.Listen("unix", s.Config.BindSocket)
 	if err != nil {
 		return err
 	}
 
 	// Socket needs to be u=rw,g=rw,o=rw so anyone can access it (we'll do auth later)
-	err = os.Chmod(sockPath, 0o666)
+	err = os.Chmod(s.Config.BindSocket, 0o666)
 	if err != nil {
 		return err
 	}
