@@ -7,7 +7,7 @@ Vue.component('NotFound', {
     </div>
   `
 });
-1
+
 Vue.component('HomeView', {
   template: `
     <div>
