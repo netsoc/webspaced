@@ -16,3 +16,22 @@ Vue.component('HomeView', {
     </div>
   `
 });
+
+Vue.component('Login', {
+  template: `
+  <template>
+    <div class ="center">
+      <img class="center" src="/static/images/logo.jpg" alt="Netsoc Logo">
+      <form @submit.prevent="handleSubmit">
+          <div class="form-group login-box center">
+              <input type="text" name="username" class="form-control" placeholder="Username" style="border:none"/>
+          </div>
+          <div class="form-group login-box center">
+              <input type="password" name="password" class="form-control" placeholder="Password" style="border:none"/>
+          </div>
+      </form>
+      <button class= "login-button center" type="button"> Login </button>
+    </div>
+  </template>
+  `
+});

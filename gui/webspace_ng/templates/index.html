@@ -9,12 +9,19 @@
           crossorigin="anonymous">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   </head>
+  <div class="sidenav">
+    <a href="#">About</a>
+    <a href="#">Services</a>
+    <a href="#">Clients</a>
+    <a href="#">Contact</a>
+  </div>
   <body>
     <div id="app">
       <nav class="navbar navbar-dark bg-dark navbar-expand-md fixed-top">
         <router-link class="navbar-brand" to="/">webspace-ng</router-link>
         <div class="navbar-nav">
           <router-link class="nav-item nav-link" active-class="active" to="/">Home</router-link>
+          <router-link class="nav-item nav-link" active-class="active" to="/login">Login</router-link>
         </div>
       </nav>
       <main role="main" class="container">
