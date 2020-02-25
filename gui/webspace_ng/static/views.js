@@ -30,6 +30,7 @@ Vue.component('Login', {
               <input type="password" name="password" class="form-control" placeholder="Password" style="border:none"/>
           </div>
       </form>
+      <button class= "login-button center" type="button"> Login </button>
     </div>
   </template>
   `
