@@ -7,7 +7,7 @@ Vue.component('NotFound', {
     </div>
   `
 });
-
+1
 Vue.component('HomeView', {
   template: `
     <div>
@@ -19,15 +19,18 @@ Vue.component('HomeView', {
 
 Vue.component('Login', {
   template: `
-    <div>
-      <form action="/post" v-if="!loading">
-        <label><b>Username</b></label>
-        <input type="text" v-model="username">
-        <label><b>Password</b></label>
-        <input type="password" v-model="password">
-        <input type="submit" v-on:click.prevent="login">
+  <template>
+    <div class ="center">
+      <img class="center" src="/static/images/logo.jpg" alt="Netsoc Logo">
+      <form @submit.prevent="handleSubmit">
+          <div class="form-group login-box center">
+              <input type="text" name="username" class="form-control" placeholder="Username" style="border:none"/>
+          </div>
+          <div class="form-group login-box center">
+              <input type="password" name="password" class="form-control" placeholder="Password" style="border:none"/>
+          </div>
       </form>
-      <Loading v-if="loading"></Loading>
     </div>
+  </template>
   `
 });

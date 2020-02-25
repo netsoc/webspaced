@@ -18,5 +18,5 @@ const router = new VueRouter({
 
 const vm = new Vue({
   el: '#app',
-  router
+  router,
 });

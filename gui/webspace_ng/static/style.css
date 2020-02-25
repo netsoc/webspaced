@@ -1,3 +1,31 @@
 body {
     padding-top: 5rem;
 }
+
+.text-line {
+    background-color: transparent;
+    color: #eeeeee;
+    outline: none;
+    outline-style: none;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+    border-bottom: solid #eeeeee 1px;
+    padding: 3px 10px;
+}
+
+.login-box{
+    width: 300px;
+    outline: none;
+    border-top-style: hidden;
+    border-right-style: hidden;
+    border-left-style: hidden;
+    border-bottom-style: groove;
+    background-color: #eee;
+}
+
+.center{
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+}
