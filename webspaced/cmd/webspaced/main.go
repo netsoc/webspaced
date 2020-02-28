@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/signal"
 
+	"github.com/netsoc/webspace-ng/webspaced/internal/config"
 	"github.com/netsoc/webspace-ng/webspaced/internal/server"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
@@ -19,7 +20,7 @@ func init() {
 	viper.SetDefault("lxd.instance_suffix", "-ws")
 	viper.SetDefault("lxd.network", "lxdbr0")
 	viper.SetDefault("webspaces.admin_group", "webspace-admin")
-	viper.SetDefault("webspaces.name_template", "{{.User}}")
+	viper.SetDefault("webspaces.name_template", "{{.User}}-ws")
 	viper.SetDefault("webspaces.domain_suffix", ".ng.localhost")
 	viper.SetDefault("webspaces.config_defaults.startup_delay", 3)
 	viper.SetDefault("webspaces.config_defaults.http_port", 80)
@@ -41,13 +42,13 @@ func init() {
 	}
 }
 func main() {
-	var config server.Config
-	if err := viper.Unmarshal(&config, server.ConfigDecoderOptions); err != nil {
+	var cfg config.Config
+	if err := viper.Unmarshal(&cfg, config.DecoderOptions); err != nil {
 		log.WithField("err", err).Fatal("Failed to parse configuration")
 	}
 
-	log.SetLevel(config.LogLevel)
-	srv := server.NewServer(config)
+	log.SetLevel(cfg.LogLevel)
+	srv := server.NewServer(cfg)
 
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, unix.SIGINT, unix.SIGTERM)

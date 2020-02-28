@@ -1,11 +1,10 @@
-package server
+package config
 
 import (
 	"html/template"
 	"reflect"
 
 	"github.com/mitchellh/mapstructure"
-	"github.com/netsoc/webspace-ng/webspaced/internal/webspace"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -33,14 +32,21 @@ func StringToTemplateHookFunc() mapstructure.DecodeHookFunc {
 	}
 }
 
-// ConfigDecoderOptions enables necessary mapstructure decode hook functions
-func ConfigDecoderOptions(config *mapstructure.DecoderConfig) {
+// DecoderOptions enables necessary mapstructure decode hook functions
+func DecoderOptions(config *mapstructure.DecoderConfig) {
 	config.ErrorUnused = true
 	config.DecodeHook = mapstructure.ComposeDecodeHookFunc(
 		config.DecodeHook,
 		StringToLogLevelHookFunc(),
 		StringToTemplateHookFunc(),
 	)
+}
+
+// WebspaceConfig describes a webspace's basic key = value configuration
+type WebspaceConfig struct {
+	StartupDelay float64 `json:"startupDelay" mapstructure:"startup_delay"`
+	HTTPPort     uint16  `json:"httpPort" mapstructure:"http_port"`
+	HTTPSPort    uint16  `json:"httpsPort" mapstructure:"https_port"`
 }
 
 // Config describes the configuration for Server
@@ -58,7 +64,7 @@ type Config struct {
 		AdminGroup      string            `mapstructure:"admin_group"`
 		NameTemplate    template.Template `mapstructure:"name_template"`
 		DomainSuffix    string            `mapstructure:"domain_suffix"`
-		ConfigDefaults  webspace.Config   `mapstructure:"config_defaults"`
+		ConfigDefaults  WebspaceConfig    `mapstructure:"config_defaults"`
 		MaxStartupDelay uint16            `mapstructure:"max_startup_delay"`
 		RunLimit        uint              `mapstructure:"run_limit"`
 		Ports           struct {

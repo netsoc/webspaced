@@ -11,7 +11,8 @@ import (
 
 	"github.com/gorilla/mux"
 	lxd "github.com/lxc/lxd/client"
-	lxdApi "github.com/lxc/lxd/shared/api"
+	"github.com/netsoc/webspace-ng/webspaced/internal/config"
+	"github.com/netsoc/webspace-ng/webspaced/internal/webspace"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 )
@@ -19,8 +20,7 @@ import (
 type key int
 
 const (
-	keyConfig key = iota
-	keyPwGrProxy
+	keyServer key = iota
 	keyPcred
 	keyUser
 )
@@ -63,14 +63,23 @@ func JSONErrResponse(w http.ResponseWriter, err error, statusCode int) {
 	enc.Encode(jsonError{err.Error()})
 }
 
+// ParseJSONBody attempts to parse the request body as JSON
+func ParseJSONBody(v interface{}, w http.ResponseWriter, r *http.Request) error {
+	if err := json.NewDecoder(r.Body).Decode(v); err != nil {
+		JSONErrResponse(w, fmt.Errorf("Failed to parse request body: %w", err), http.StatusBadRequest)
+		return err
+	}
+
+	return nil
+}
+
 // UserMiddleware is a middleware for resolving Unix socket peer credentials to a name
 func UserMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		config := r.Context().Value(keyConfig).(*Config)
-		pwGrProxy := r.Context().Value(keyPwGrProxy).(*PwGrProxy)
+		s := r.Context().Value(keyServer).(*Server)
 		pcred := r.Context().Value(keyPcred).(*unix.Ucred)
 
-		username, err := pwGrProxy.LookupUID(pcred.Uid)
+		username, err := s.pwGrProxy.LookupUID(pcred.Uid)
 		if err != nil {
 			username = fmt.Sprintf("u%v", pcred.Uid)
 			log.WithFields(log.Fields{
@@ -79,12 +88,12 @@ func UserMiddleware(next http.Handler) http.Handler {
 			}).Warn("Coudln't find username for UID, using fallback")
 		}
 
-		isAdmin, err := pwGrProxy.UserIsMember(username, config.Webspaces.AdminGroup)
+		isAdmin, err := s.pwGrProxy.UserIsMember(username, s.Config.Webspaces.AdminGroup)
 		if err != nil {
 			log.WithFields(log.Fields{
 				"err":   err,
 				"user":  username,
-				"group": config.Webspaces.AdminGroup,
+				"group": s.Config.Webspaces.AdminGroup,
 			}).Warn("Failed to check if user is in admin group")
 		}
 
@@ -103,13 +112,15 @@ func UserMiddleware(next http.Handler) http.Handler {
 
 // Server is the main webspaced server struct
 type Server struct {
-	Config Config
-	lxd    lxd.InstanceServer
-	http   *http.Server
+	Config    config.Config
+	Webspaces *webspace.Manager
+	lxd       lxd.InstanceServer
+	http      *http.Server
+	pwGrProxy *PwGrProxy
 }
 
 // NewServer returns an initialized Server
-func NewServer(config Config) *Server {
+func NewServer(config config.Config) *Server {
 	r := mux.NewRouter()
 	r.Use(UserMiddleware)
 	httpSrv := &http.Server{
@@ -122,6 +133,7 @@ func NewServer(config Config) *Server {
 		http:   httpSrv,
 	}
 	r.HandleFunc("/v1/images", s.apiImages).Methods("GET")
+	r.HandleFunc("/v1/webspace", s.apiCreateWebspace).Methods("POST")
 	r.NotFoundHandler = http.HandlerFunc(s.apiNotFound)
 
 	return s
@@ -129,9 +141,9 @@ func NewServer(config Config) *Server {
 
 // Start begins listening
 func (s *Server) Start() error {
-	pwGrProxy := NewPwGrProxy(s.Config.PwGrProxySocket)
+	s.pwGrProxy = NewPwGrProxy(s.Config.PwGrProxySocket)
 	s.http.BaseContext = func(_ net.Listener) context.Context {
-		return context.WithValue(context.Background(), keyPwGrProxy, pwGrProxy)
+		return context.WithValue(context.Background(), keyServer, s)
 	}
 
 	var err error
@@ -142,12 +154,9 @@ func (s *Server) Start() error {
 		return fmt.Errorf("LXD returned error looking for network %v: %w", s.Config.LXD.Network, err)
 	}
 
-	var l *lxd.EventListener
-	l, err = s.lxd.GetEvents()
-	if err != nil {
-		return err
+	if s.Webspaces, err = webspace.NewManager(&s.Config, s.lxd); err != nil {
+		return fmt.Errorf("Failed to initialize webspace manager: %v", err)
 	}
-	l.AddHandler([]string{"lifecycle"}, s.onLxdEvent)
 
 	listener, err := net.Listen("unix", s.Config.BindSocket)
 	if err != nil {
@@ -169,15 +178,6 @@ func (s *Server) Start() error {
 // Stop shuts down the server and listener
 func (s *Server) Stop() error {
 	return s.http.Close()
-}
-
-func (s *Server) onLxdEvent(e lxdApi.Event) {
-	var details map[string]interface{}
-	json.Unmarshal(e.Metadata, &details)
-	log.WithFields(log.Fields{
-		"type":    e.Type,
-		"details": details,
-	}).Debug("lxd event")
 }
 
 func (s *Server) apiNotFound(w http.ResponseWriter, r *http.Request) {
