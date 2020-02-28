@@ -1,6 +1,6 @@
 module github.com/netsoc/webspace-ng/webspaced
 
-go 1.13
+go 1.14
 
 require (
 	github.com/flosch/pongo2 v0.0.0-20190707114632-bbf5a6c351f4 // indirect
