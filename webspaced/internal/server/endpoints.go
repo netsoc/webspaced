@@ -1,10 +1,11 @@
 package server
 
 import (
+	"errors"
 	"net/http"
-	"strings"
 
 	lxdApi "github.com/lxc/lxd/shared/api"
+	"github.com/netsoc/webspace-ng/webspaced/internal/webspace"
 )
 
 type simpleImageRes struct {
@@ -43,6 +44,17 @@ type createWebspaceRes struct {
 	SSHPort uint16 `json:"sshPort"`
 }
 
+func wsErrorToStatus(err error) int {
+	switch {
+	case errors.Is(err, webspace.ErrNotFound):
+		return http.StatusNotFound
+	case errors.Is(err, webspace.ErrExists):
+		return http.StatusConflict
+	default:
+		return http.StatusInternalServerError
+	}
+}
+
 func (s *Server) apiCreateWebspace(w http.ResponseWriter, r *http.Request) {
 	var body createWebspaceReq
 	if err := ParseJSONBody(&body, w, r); err != nil {
@@ -52,12 +64,7 @@ func (s *Server) apiCreateWebspace(w http.ResponseWriter, r *http.Request) {
 	user := r.Context().Value(keyUser).(string)
 	_, err := s.Webspaces.Create(user, body.Image, body.Password, body.SSHKey)
 	if err != nil {
-		status := http.StatusInternalServerError
-		// HACK: LXD doesn't seem to return a code we can use to determine the error...
-		if strings.Index(err.Error(), "instance already exists") != -1 {
-			status = http.StatusConflict
-		}
-		JSONErrResponse(w, err, status)
+		JSONErrResponse(w, err, wsErrorToStatus(err))
 		return
 	}
 

@@ -165,7 +165,7 @@ func (s *Server) Start() error {
 	}
 
 	if s.Webspaces, err = webspace.NewManager(&s.Config, s.lxd); err != nil {
-		return fmt.Errorf("Failed to initialize webspace manager: %v", err)
+		return fmt.Errorf("failed to initialize webspace manager: %v", err)
 	}
 
 	listener, err := net.Listen("unix", s.Config.BindSocket)

@@ -3,13 +3,21 @@ package webspace
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"strings"
 
 	lxd "github.com/lxc/lxd/client"
 	lxdApi "github.com/lxc/lxd/shared/api"
 	"github.com/netsoc/webspace-ng/webspaced/internal/config"
 	log "github.com/sirupsen/logrus"
 )
+
+// ErrNotFound indicates that a resource was not found
+var ErrNotFound = errors.New("not found")
+
+// ErrExists indicates that a resource already exists
+var ErrExists = errors.New("already exists")
 
 // Webspace represents a webspace with all of its configuration and state
 type Webspace struct {
@@ -25,7 +33,7 @@ type Webspace struct {
 func (w *Webspace) InstanceName() (string, error) {
 	buf := bytes.NewBufferString("")
 	if err := w.manager.config.Webspaces.NameTemplate.Execute(buf, w); err != nil {
-		return "", fmt.Errorf("Failed to execute container name template: %w", err)
+		return "", fmt.Errorf("failed to execute container name template: %w", err)
 	}
 
 	return buf.String(), nil
@@ -40,22 +48,22 @@ func (w *Webspace) Delete() error {
 
 	state, _, err := w.manager.lxd.GetInstanceState(n)
 	if err != nil {
-		return fmt.Errorf("Failed to get webspace state: %w", err)
+		return fmt.Errorf("failed to get webspace state: %w", err)
 	}
 
 	if state.StatusCode == lxdApi.Started {
 		if err := w.manager.lxdState(n, "stop"); err != nil {
-			return fmt.Errorf("Failed to stop webspace instance: %w", err)
+			return fmt.Errorf("failed to stop webspace instance: %w", err)
 		}
 	}
 
 	op, err := w.manager.lxd.DeleteInstance(n)
 	if err != nil {
-		return fmt.Errorf("Failed to delete webspace instance: %w", err)
+		return fmt.Errorf("failed to delete webspace instance: %w", err)
 	}
 
 	if err := op.Wait(); err != nil {
-		return fmt.Errorf("Failed to delete webspace instance: %w", err)
+		return fmt.Errorf("failed to delete webspace instance: %w", err)
 	}
 
 	return nil
@@ -131,35 +139,43 @@ func (m *Manager) Create(user string, image string, password string, sshKey stri
 		},
 	})
 	if err != nil {
-		return nil, fmt.Errorf("Failed to create webspace instance: %w", err)
+		// HACK: LXD doesn't seem to return a code we can use to determine the error...
+		if err.Error() == "No such object" {
+			err = ErrNotFound
+		}
+		return nil, fmt.Errorf("failed to create webspace instance: %w", err)
 	}
 
 	if err := op.Wait(); err != nil {
-		return nil, fmt.Errorf("Failed to create webspace instance: %w", err)
+		// HACK: LXD doesn't seem to return a code we can use to determine the error...
+		if strings.Index(err.Error(), "instance already exists") != -1 {
+			err = ErrExists
+		}
+		return nil, fmt.Errorf("failed to create webspace instance: %w", err)
 	}
 
 	if password != "" {
 		if err := m.lxdState(n, "start"); err != nil {
-			return nil, fmt.Errorf("Failed to start webspace: %w", err)
+			return nil, fmt.Errorf("failed to start webspace: %w", err)
 		}
 
 		op, err := m.lxd.ExecInstance(n, lxdApi.InstanceExecPost{
 			Command: []string{"sh", "-c", fmt.Sprintf(`echo "root:%v" | chpasswd`, password)},
 		}, nil)
 		if err != nil {
-			return nil, fmt.Errorf("Failed to set root password: %w", err)
+			return nil, fmt.Errorf("failed to set root password: %w", err)
 		}
 		if err := op.Wait(); err != nil {
-			return nil, fmt.Errorf("Failed to set root password: %v", err)
+			return nil, fmt.Errorf("failed to set root password: %v", err)
 		}
 
 		code := op.Get().Metadata["return"]
 		if code != 0. {
-			return nil, fmt.Errorf("Failed to change root password: exit code %v", code)
+			return nil, fmt.Errorf("failed to change root password: exit code %v", code)
 		}
 
 		if err := m.lxdState(n, "stop"); err != nil {
-			return nil, fmt.Errorf("Failed to stop webspace: %w", err)
+			return nil, fmt.Errorf("failed to stop webspace: %w", err)
 		}
 	}
 
