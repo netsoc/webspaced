@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	lxd "github.com/lxc/lxd/client"
 	"github.com/netsoc/webspace-ng/webspaced/internal/config"
@@ -66,7 +67,7 @@ func JSONErrResponse(w http.ResponseWriter, err error, statusCode int) {
 // ParseJSONBody attempts to parse the request body as JSON
 func ParseJSONBody(v interface{}, w http.ResponseWriter, r *http.Request) error {
 	if err := json.NewDecoder(r.Body).Decode(v); err != nil {
-		JSONErrResponse(w, fmt.Errorf("Failed to parse request body: %w", err), http.StatusBadRequest)
+		JSONErrResponse(w, fmt.Errorf("failed to parse request body: %w", err), http.StatusBadRequest)
 		return err
 	}
 
@@ -123,7 +124,7 @@ func NewServer(config config.Config) *Server {
 	r := mux.NewRouter()
 	r.Use(UserMiddleware)
 	httpSrv := &http.Server{
-		Handler:     r,
+		Handler:     handlers.CombinedLoggingHandler(log.StandardLogger().WriterLevel(log.DebugLevel), r),
 		ConnContext: recordConnUcred,
 	}
 
