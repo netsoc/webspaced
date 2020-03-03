@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"errors"
 	"net/http"
 
@@ -46,23 +47,31 @@ type createWebspaceRes struct {
 
 func wsErrorToStatus(err error) int {
 	switch {
-	case errors.Is(err, webspace.ErrNotFound):
+	case errors.Is(err, webspace.ErrNotFound), errors.Is(err, webspace.ErrNotRunning):
 		return http.StatusNotFound
-	case errors.Is(err, webspace.ErrExists):
+	case errors.Is(err, webspace.ErrExists), errors.Is(err, webspace.ErrRunning):
 		return http.StatusConflict
 	default:
 		return http.StatusInternalServerError
 	}
 }
 
-func (s *Server) apiGetWebspace(w http.ResponseWriter, r *http.Request) {
-	user := r.Context().Value(keyUser).(string)
-	ws, err := s.Webspaces.Get(user)
-	if err != nil {
-		JSONErrResponse(w, err, wsErrorToStatus(err))
-		return
-	}
+func (s *Server) getWebspaceMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		user := r.Context().Value(keyUser).(string)
+		ws, err := s.Webspaces.Get(user)
+		if err != nil {
+			JSONErrResponse(w, err, wsErrorToStatus(err))
+			return
+		}
 
+		r = r.WithContext(context.WithValue(r.Context(), keyWebspace, ws))
+		next.ServeHTTP(w, r)
+	})
+}
+
+func (s *Server) apiGetWebspace(w http.ResponseWriter, r *http.Request) {
+	ws := r.Context().Value(keyWebspace).(*webspace.Webspace)
 	JSONResponse(w, ws, http.StatusOK)
 }
 
@@ -83,14 +92,36 @@ func (s *Server) apiCreateWebspace(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) apiDeleteWebspace(w http.ResponseWriter, r *http.Request) {
-	user := r.Context().Value(keyUser).(string)
-	ws, err := s.Webspaces.Get(user)
-	if err != nil {
+	ws := r.Context().Value(keyWebspace).(*webspace.Webspace)
+	if err := ws.Delete(); err != nil {
 		JSONErrResponse(w, err, wsErrorToStatus(err))
 		return
 	}
 
-	if err := ws.Delete(); err != nil {
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s *Server) apiBootWebspace(w http.ResponseWriter, r *http.Request) {
+	ws := r.Context().Value(keyWebspace).(*webspace.Webspace)
+	if err := ws.Boot(); err != nil {
+		JSONErrResponse(w, err, wsErrorToStatus(err))
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+func (s *Server) apiRebootWebspace(w http.ResponseWriter, r *http.Request) {
+	ws := r.Context().Value(keyWebspace).(*webspace.Webspace)
+	if err := ws.Reboot(); err != nil {
+		JSONErrResponse(w, err, wsErrorToStatus(err))
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+func (s *Server) apiShutdownWebspace(w http.ResponseWriter, r *http.Request) {
+	ws := r.Context().Value(keyWebspace).(*webspace.Webspace)
+	if err := ws.Shutdown(); err != nil {
 		JSONErrResponse(w, err, wsErrorToStatus(err))
 		return
 	}

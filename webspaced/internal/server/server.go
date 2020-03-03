@@ -25,6 +25,7 @@ const (
 	keyServer key = iota
 	keyPcred
 	keyUser
+	keyWebspace
 )
 
 func recordConnUcred(ctx context.Context, c net.Conn) context.Context {
@@ -141,10 +142,19 @@ func NewServer(config config.Config) *Server {
 		Config: config,
 		http:   httpSrv,
 	}
+
 	r.HandleFunc("/v1/images", s.apiImages).Methods("GET")
-	r.HandleFunc("/v1/webspace", s.apiGetWebspace).Methods("GET")
+
 	r.HandleFunc("/v1/webspace", s.apiCreateWebspace).Methods("POST")
-	r.HandleFunc("/v1/webspace", s.apiDeleteWebspace).Methods("DELETE")
+	wsOpRouter := r.PathPrefix("/v1/webspace").Subrouter()
+	wsOpRouter.Use(s.getWebspaceMiddleware)
+	wsOpRouter.HandleFunc("", s.apiGetWebspace).Methods("GET")
+	wsOpRouter.HandleFunc("", s.apiDeleteWebspace).Methods("DELETE")
+
+	wsOpRouter.HandleFunc("/state", s.apiBootWebspace).Methods("POST")
+	wsOpRouter.HandleFunc("/state", s.apiRebootWebspace).Methods("PUT")
+	wsOpRouter.HandleFunc("/state", s.apiShutdownWebspace).Methods("DELETE")
+
 	r.NotFoundHandler = http.HandlerFunc(s.apiNotFound)
 
 	return s

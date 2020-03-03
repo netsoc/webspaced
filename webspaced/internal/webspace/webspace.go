@@ -20,6 +20,12 @@ var ErrNotFound = errors.New("not found")
 // ErrExists indicates that a resource already exists
 var ErrExists = errors.New("already exists")
 
+// ErrNotRunning indicates that a webspace is not running
+var ErrNotRunning = errors.New("not running")
+
+// ErrRunning indicates that a webspace is already running
+var ErrRunning = errors.New("already running")
+
 // convertLXDError is a HACK: LXD doesn't seem to return a code we can use to determine the error...
 func convertLXDError(err error) error {
 	switch err.Error() {
@@ -27,6 +33,11 @@ func convertLXDError(err error) error {
 		return ErrNotFound
 	case "Create instance: Add instance info to the database: This instance already exists":
 		return ErrExists
+	case "The container is already stopped":
+		return ErrNotRunning
+	case "Common start logic: The container is already running":
+		return ErrRunning
+
 	default:
 		return err
 	}
@@ -64,9 +75,9 @@ func (w *Webspace) Delete() error {
 		return fmt.Errorf("failed to get webspace state: %w", err)
 	}
 
-	if state.StatusCode == lxdApi.Started {
-		if err := w.manager.lxdState(n, "stop"); err != nil {
-			return fmt.Errorf("failed to stop webspace instance: %w", err)
+	if state.StatusCode == lxdApi.Running {
+		if err := w.Shutdown(); err != nil {
+			return err
 		}
 	}
 
@@ -79,6 +90,45 @@ func (w *Webspace) Delete() error {
 		return fmt.Errorf("failed to delete webspace instance: %w", err)
 	}
 
+	return nil
+}
+
+// Boot starts the webspace
+func (w *Webspace) Boot() error {
+	n, err := w.InstanceName()
+	if err != nil {
+		return err
+	}
+
+	if err := w.manager.lxdState(n, "start"); err != nil {
+		return fmt.Errorf("failed to boot webspace: %w", convertLXDError(err))
+	}
+	return nil
+}
+
+// Reboot restarts the webspace
+func (w *Webspace) Reboot() error {
+	n, err := w.InstanceName()
+	if err != nil {
+		return err
+	}
+
+	if err := w.manager.lxdState(n, "restart"); err != nil {
+		return fmt.Errorf("failed to reboot webspace: %w", convertLXDError(err))
+	}
+	return nil
+}
+
+// Shutdown stops the webspace
+func (w *Webspace) Shutdown() error {
+	n, err := w.InstanceName()
+	if err != nil {
+		return err
+	}
+
+	if err := w.manager.lxdState(n, "stop"); err != nil {
+		return fmt.Errorf("failed to shutdown webspace: %w", convertLXDError(err))
+	}
 	return nil
 }
 
@@ -197,8 +247,8 @@ func (m *Manager) Create(user string, image string, password string, sshKey stri
 	}
 
 	if password != "" {
-		if err := m.lxdState(n, "start"); err != nil {
-			return nil, fmt.Errorf("failed to start webspace: %w", convertLXDError(err))
+		if err := w.Boot(); err != nil {
+			return nil, err
 		}
 
 		op, err := m.lxd.ExecInstance(n, lxdApi.InstanceExecPost{
@@ -216,8 +266,8 @@ func (m *Manager) Create(user string, image string, password string, sshKey stri
 			return nil, fmt.Errorf("failed to change root password: exit code %v", code)
 		}
 
-		if err := m.lxdState(n, "stop"); err != nil {
-			return nil, fmt.Errorf("failed to stop webspace: %w", convertLXDError(err))
+		if err := w.Shutdown(); err != nil {
+			return nil, err
 		}
 	}
 
