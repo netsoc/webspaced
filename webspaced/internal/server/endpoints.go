@@ -55,6 +55,17 @@ func wsErrorToStatus(err error) int {
 	}
 }
 
+func (s *Server) apiGetWebspace(w http.ResponseWriter, r *http.Request) {
+	user := r.Context().Value(keyUser).(string)
+	ws, err := s.Webspaces.Get(user)
+	if err != nil {
+		JSONErrResponse(w, err, wsErrorToStatus(err))
+		return
+	}
+
+	JSONResponse(w, ws, http.StatusOK)
+}
+
 func (s *Server) apiCreateWebspace(w http.ResponseWriter, r *http.Request) {
 	var body createWebspaceReq
 	if err := ParseJSONBody(&body, w, r); err != nil {

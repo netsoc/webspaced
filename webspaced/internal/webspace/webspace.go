@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 
 	lxd "github.com/lxc/lxd/client"
 	lxdApi "github.com/lxc/lxd/shared/api"
@@ -20,6 +19,18 @@ var ErrNotFound = errors.New("not found")
 
 // ErrExists indicates that a resource already exists
 var ErrExists = errors.New("already exists")
+
+// convertLXDError is a HACK: LXD doesn't seem to return a code we can use to determine the error...
+func convertLXDError(err error) error {
+	switch err.Error() {
+	case "not found", "No such object":
+		return ErrNotFound
+	case "Create instance: Add instance info to the database: This instance already exists":
+		return ErrExists
+	default:
+		return err
+	}
+}
 
 // Webspace represents a webspace with all of its configuration and state
 type Webspace struct {
@@ -117,6 +128,33 @@ func (m *Manager) lxdState(name string, action string) error {
 	return nil
 }
 
+// Get retrieves a Webspace instance from LXD
+func (m *Manager) Get(user string) (*Webspace, error) {
+	w := &Webspace{
+		manager: m,
+		User:    user,
+	}
+	n, err := w.InstanceName()
+	if err != nil {
+		return nil, err
+	}
+
+	i, _, err := m.lxd.GetInstance(n)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get webspace instance: %w", convertLXDError(err))
+	}
+
+	confJSON, ok := i.Config[lxdConfigKey]
+	if !ok {
+		return nil, fmt.Errorf("failed to retrieve webspace instance configuration from LXD")
+	}
+	if err := json.Unmarshal([]byte(confJSON), w); err != nil {
+		return nil, fmt.Errorf("failed to parse webspace configuration stored in LXD: %w", err)
+	}
+
+	return w, nil
+}
+
 // Create creates a new webspace container via LXD
 func (m *Manager) Create(user string, image string, password string, sshKey string) (*Webspace, error) {
 	w := &Webspace{
@@ -151,34 +189,26 @@ func (m *Manager) Create(user string, image string, password string, sshKey stri
 		},
 	})
 	if err != nil {
-		// HACK: LXD doesn't seem to return a code we can use to determine the error...
-		if err.Error() == "No such object" {
-			err = ErrNotFound
-		}
-		return nil, fmt.Errorf("failed to create webspace instance: %w", err)
+		return nil, fmt.Errorf("failed to create webspace instance: %w", convertLXDError(err))
 	}
 
 	if err := op.Wait(); err != nil {
-		// HACK: LXD doesn't seem to return a code we can use to determine the error...
-		if strings.Index(err.Error(), "instance already exists") != -1 {
-			err = ErrExists
-		}
-		return nil, fmt.Errorf("failed to create webspace instance: %w", err)
+		return nil, fmt.Errorf("failed to create webspace instance: %w", convertLXDError(err))
 	}
 
 	if password != "" {
 		if err := m.lxdState(n, "start"); err != nil {
-			return nil, fmt.Errorf("failed to start webspace: %w", err)
+			return nil, fmt.Errorf("failed to start webspace: %w", convertLXDError(err))
 		}
 
 		op, err := m.lxd.ExecInstance(n, lxdApi.InstanceExecPost{
 			Command: []string{"sh", "-c", fmt.Sprintf(`echo "root:%v" | chpasswd`, password)},
 		}, nil)
 		if err != nil {
-			return nil, fmt.Errorf("failed to set root password: %w", err)
+			return nil, fmt.Errorf("failed to set root password: %w", convertLXDError(err))
 		}
 		if err := op.Wait(); err != nil {
-			return nil, fmt.Errorf("failed to set root password: %v", err)
+			return nil, fmt.Errorf("failed to set root password: %w", convertLXDError(err))
 		}
 
 		code := op.Get().Metadata["return"]
@@ -187,7 +217,7 @@ func (m *Manager) Create(user string, image string, password string, sshKey stri
 		}
 
 		if err := m.lxdState(n, "stop"); err != nil {
-			return nil, fmt.Errorf("failed to stop webspace: %w", err)
+			return nil, fmt.Errorf("failed to stop webspace: %w", convertLXDError(err))
 		}
 	}
 

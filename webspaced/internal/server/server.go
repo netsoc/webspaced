@@ -142,6 +142,7 @@ func NewServer(config config.Config) *Server {
 		http:   httpSrv,
 	}
 	r.HandleFunc("/v1/images", s.apiImages).Methods("GET")
+	r.HandleFunc("/v1/webspace", s.apiGetWebspace).Methods("GET")
 	r.HandleFunc("/v1/webspace", s.apiCreateWebspace).Methods("POST")
 	r.HandleFunc("/v1/webspace", s.apiDeleteWebspace).Methods("DELETE")
 	r.NotFoundHandler = http.HandlerFunc(s.apiNotFound)
