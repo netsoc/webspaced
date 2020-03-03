@@ -27,6 +27,22 @@ HTTP 200 and a list of objects containing the following properties from the resp
  - `size`
 
 ## `/v1/webspace`
+### GET
+Retrieve all information about a webspace (including [configuration](#config-get-res), [domains](#domains-get-res) and
+[ports](#ports-get-res)).
+
+Response:
+
+HTTP 200 body containing the following:
+
+- `user`: Name of the webspace user
+- [`config`](#config-get-res)
+- [`domains`](#domains-get-res)
+- [`ports`](#ports-get-res)
+
+Errors:
+ - Webspace does not exist (HTTP 404 Not Found)
+
 ### POST
 Initialize the user's webspace.
 
@@ -45,6 +61,7 @@ Either HTTP 204 (No Content) and an empty response body (if `sshKey` was not pre
 
 Errors:
  - Webspace already exists (HTTP 409 Conflict)
+ - Image not found (HTTP 404 Not Found)
 
 ### DELETE
 Destroy the user's webspace.
@@ -128,7 +145,7 @@ Errors:
 ### GET
 Get the currently configured domains for the webspace.
 
-Response:
+<a name="domains-get-res"></a>Response:
 
 HTTP 200 with an array of strings representing each configured domain.
 
@@ -163,7 +180,7 @@ Errors:
  - Attempt to delete default domain (HTTP 400 Bad Request)
 
 ## `/v1/webspace/ports`
-### GET
+<a name="ports-get-res"></a>### GET
 Obtain the current list of port forwardings for the webspace.
 
 Response:
