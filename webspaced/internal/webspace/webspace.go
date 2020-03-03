@@ -53,6 +53,15 @@ type Webspace struct {
 	Ports   map[uint16]uint16     `json:"ports"`
 }
 
+func (w *Webspace) lxdConfig() (string, error) {
+	confJSON, err := json.Marshal(w)
+	if err != nil {
+		return "", fmt.Errorf("failed to serialize webspace config for LXD: %w", err)
+	}
+
+	return string(confJSON), nil
+}
+
 // InstanceName uses the template to calculate the name of the instance
 func (w *Webspace) InstanceName() (string, error) {
 	buf := bytes.NewBufferString("")
@@ -128,6 +137,35 @@ func (w *Webspace) Shutdown() error {
 
 	if err := w.manager.lxdState(n, "stop"); err != nil {
 		return fmt.Errorf("failed to shutdown webspace: %w", convertLXDError(err))
+	}
+	return nil
+}
+
+// Save updates the stored LXD configuration
+func (w *Webspace) Save() error {
+	n, err := w.InstanceName()
+	if err != nil {
+		return err
+	}
+
+	i, _, err := w.manager.lxd.GetInstance(n)
+	if err != nil {
+		return fmt.Errorf("failed to get webspace config from LXD: %w", convertLXDError(err))
+	}
+
+	lxdConf, err := w.lxdConfig()
+	if err != nil {
+		return err
+	}
+
+	i.InstancePut.Config[lxdConfigKey] = lxdConf
+	op, err := w.manager.lxd.UpdateInstance(n, i.InstancePut, "")
+	if err != nil {
+		return fmt.Errorf("failed to update LXD config: %w", convertLXDError(err))
+	}
+
+	if err := op.Wait(); err != nil {
+		return fmt.Errorf("failed to update LXD config: %w", convertLXDError(err))
 	}
 	return nil
 }
@@ -219,9 +257,9 @@ func (m *Manager) Create(user string, image string, password string, sshKey stri
 		return nil, err
 	}
 
-	confJSON, err := json.Marshal(w)
+	lxdConf, err := w.lxdConfig()
 	if err != nil {
-		return nil, fmt.Errorf("failed to serialize webspace config for LXD: %w", err)
+		return nil, err
 	}
 	op, err := m.lxd.CreateInstance(lxdApi.InstancesPost{
 		Type: lxdApi.InstanceTypeContainer,
@@ -234,7 +272,7 @@ func (m *Manager) Create(user string, image string, password string, sshKey stri
 			Ephemeral: false,
 			Profiles:  []string{m.config.Webspaces.Profile},
 			Config: map[string]string{
-				lxdConfigKey: string(confJSON),
+				lxdConfigKey: lxdConf,
 			},
 		},
 	})

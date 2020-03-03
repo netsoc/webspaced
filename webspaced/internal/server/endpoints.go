@@ -128,3 +128,22 @@ func (s *Server) apiShutdownWebspace(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusNoContent)
 }
+
+func (s *Server) apiGetWebspaceConfig(w http.ResponseWriter, r *http.Request) {
+	ws := r.Context().Value(keyWebspace).(*webspace.Webspace)
+	JSONResponse(w, ws.Config, http.StatusOK)
+}
+func (s *Server) apiUpdateWebspaceConfig(w http.ResponseWriter, r *http.Request) {
+	ws := r.Context().Value(keyWebspace).(*webspace.Webspace)
+	oldConf := ws.Config
+
+	if err := ParseJSONBody(&ws.Config, w, r); err != nil {
+		return
+	}
+	if err := ws.Save(); err != nil {
+		JSONErrResponse(w, err, wsErrorToStatus(err))
+		return
+	}
+
+	JSONResponse(w, oldConf, http.StatusOK)
+}

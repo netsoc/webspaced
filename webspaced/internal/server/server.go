@@ -68,7 +68,9 @@ func JSONErrResponse(w http.ResponseWriter, err error, statusCode int) {
 
 // ParseJSONBody attempts to parse the request body as JSON
 func ParseJSONBody(v interface{}, w http.ResponseWriter, r *http.Request) error {
-	if err := json.NewDecoder(r.Body).Decode(v); err != nil {
+	d := json.NewDecoder(r.Body)
+	d.DisallowUnknownFields()
+	if err := d.Decode(v); err != nil {
 		JSONErrResponse(w, fmt.Errorf("failed to parse request body: %w", err), http.StatusBadRequest)
 		return err
 	}
@@ -154,6 +156,9 @@ func NewServer(config config.Config) *Server {
 	wsOpRouter.HandleFunc("/state", s.apiBootWebspace).Methods("POST")
 	wsOpRouter.HandleFunc("/state", s.apiRebootWebspace).Methods("PUT")
 	wsOpRouter.HandleFunc("/state", s.apiShutdownWebspace).Methods("DELETE")
+
+	wsOpRouter.HandleFunc("/config", s.apiGetWebspaceConfig).Methods("GET")
+	wsOpRouter.HandleFunc("/config", s.apiUpdateWebspaceConfig).Methods("PATCH")
 
 	r.NotFoundHandler = http.HandlerFunc(s.apiNotFound)
 
