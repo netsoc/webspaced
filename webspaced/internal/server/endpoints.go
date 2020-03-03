@@ -74,7 +74,6 @@ func (s *Server) apiGetWebspace(w http.ResponseWriter, r *http.Request) {
 	ws := r.Context().Value(keyWebspace).(*webspace.Webspace)
 	JSONResponse(w, ws, http.StatusOK)
 }
-
 func (s *Server) apiCreateWebspace(w http.ResponseWriter, r *http.Request) {
 	var body createWebspaceReq
 	if err := ParseJSONBody(&body, w, r); err != nil {
@@ -90,7 +89,6 @@ func (s *Server) apiCreateWebspace(w http.ResponseWriter, r *http.Request) {
 
 	JSONResponse(w, ws, http.StatusCreated)
 }
-
 func (s *Server) apiDeleteWebspace(w http.ResponseWriter, r *http.Request) {
 	ws := r.Context().Value(keyWebspace).(*webspace.Webspace)
 	if err := ws.Delete(); err != nil {
@@ -101,27 +99,19 @@ func (s *Server) apiDeleteWebspace(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (s *Server) apiBootWebspace(w http.ResponseWriter, r *http.Request) {
+func (s *Server) apiWebspaceState(w http.ResponseWriter, r *http.Request) {
 	ws := r.Context().Value(keyWebspace).(*webspace.Webspace)
-	if err := ws.Boot(); err != nil {
-		JSONErrResponse(w, err, wsErrorToStatus(err))
-		return
-	}
 
-	w.WriteHeader(http.StatusNoContent)
-}
-func (s *Server) apiRebootWebspace(w http.ResponseWriter, r *http.Request) {
-	ws := r.Context().Value(keyWebspace).(*webspace.Webspace)
-	if err := ws.Reboot(); err != nil {
-		JSONErrResponse(w, err, wsErrorToStatus(err))
-		return
+	var err error
+	switch r.Method {
+	case "POST":
+		err = ws.Boot()
+	case "PUT":
+		err = ws.Reboot()
+	case "DELETE":
+		err = ws.Shutdown()
 	}
-
-	w.WriteHeader(http.StatusNoContent)
-}
-func (s *Server) apiShutdownWebspace(w http.ResponseWriter, r *http.Request) {
-	ws := r.Context().Value(keyWebspace).(*webspace.Webspace)
-	if err := ws.Shutdown(); err != nil {
+	if err != nil {
 		JSONErrResponse(w, err, wsErrorToStatus(err))
 		return
 	}
