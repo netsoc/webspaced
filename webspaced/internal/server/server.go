@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"os"
@@ -109,6 +110,15 @@ func UserMiddleware(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r)
 	})
 }
+func writeAccessLog(w io.Writer, params handlers.LogFormatterParams) {
+	user := params.Request.Context().Value(keyUser).(string)
+	log.WithFields(log.Fields{
+		"user":    user,
+		"agent":   params.Request.UserAgent(),
+		"status":  params.StatusCode,
+		"resSize": params.Size,
+	}).Debugf("%v %v", params.Request.Method, params.URL.RequestURI())
+}
 
 // Server is the main webspaced server struct
 type Server struct {
@@ -122,9 +132,8 @@ type Server struct {
 // NewServer returns an initialized Server
 func NewServer(config config.Config) *Server {
 	r := mux.NewRouter()
-	r.Use(UserMiddleware)
 	httpSrv := &http.Server{
-		Handler:     handlers.CombinedLoggingHandler(log.StandardLogger().WriterLevel(log.DebugLevel), r),
+		Handler:     UserMiddleware(handlers.CustomLoggingHandler(nil, r, writeAccessLog)),
 		ConnContext: recordConnUcred,
 	}
 
