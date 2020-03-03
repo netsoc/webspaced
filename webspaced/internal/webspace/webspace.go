@@ -15,7 +15,7 @@ import (
 type Webspace struct {
 	manager *Manager
 
-	User    string                `json:"string"`
+	User    string                `json:"user"`
 	Config  config.WebspaceConfig `json:"config"`
 	Domains []string              `json:"domains"`
 	Ports   map[uint16]uint16     `json:"ports"`
@@ -29,6 +29,36 @@ func (w *Webspace) InstanceName() (string, error) {
 	}
 
 	return buf.String(), nil
+}
+
+// Delete deletes the webspace
+func (w *Webspace) Delete() error {
+	n, err := w.InstanceName()
+	if err != nil {
+		return err
+	}
+
+	state, _, err := w.manager.lxd.GetInstanceState(n)
+	if err != nil {
+		return fmt.Errorf("Failed to get webspace state: %w", err)
+	}
+
+	if state.StatusCode == lxdApi.Started {
+		if err := w.manager.lxdState(n, "stop"); err != nil {
+			return fmt.Errorf("Failed to stop webspace instance: %w", err)
+		}
+	}
+
+	op, err := w.manager.lxd.DeleteInstance(n)
+	if err != nil {
+		return fmt.Errorf("Failed to delete webspace instance: %w", err)
+	}
+
+	if err := op.Wait(); err != nil {
+		return fmt.Errorf("Failed to delete webspace instance: %w", err)
+	}
+
+	return nil
 }
 
 // Manager manages webspace containers
@@ -105,7 +135,7 @@ func (m *Manager) Create(user string, image string, password string, sshKey stri
 	}
 
 	if err := op.Wait(); err != nil {
-		return nil, fmt.Errorf("Failed to wait for webspace instance creation: %w", err)
+		return nil, fmt.Errorf("Failed to create webspace instance: %w", err)
 	}
 
 	if password != "" {
@@ -120,7 +150,7 @@ func (m *Manager) Create(user string, image string, password string, sshKey stri
 			return nil, fmt.Errorf("Failed to set root password: %w", err)
 		}
 		if err := op.Wait(); err != nil {
-			return nil, fmt.Errorf("Failed to wait for password setting to complete: %v", err)
+			return nil, fmt.Errorf("Failed to set root password: %v", err)
 		}
 
 		code := op.Get().Metadata["return"]

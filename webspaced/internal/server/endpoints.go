@@ -64,3 +64,7 @@ func (s *Server) apiCreateWebspace(w http.ResponseWriter, r *http.Request) {
 	// TODO: Return SSH port forward
 	w.WriteHeader(http.StatusNoContent)
 }
+
+func (s *Server) apiDeleteWebspace(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNoContent)
+}

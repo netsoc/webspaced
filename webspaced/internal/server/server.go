@@ -97,7 +97,6 @@ func UserMiddleware(next http.Handler) http.Handler {
 			}).Warn("Failed to check if user is in admin group")
 		}
 
-		// TODO: check for membership of `webspace-admin` group
 		if isAdmin || pcred.Uid == 0 {
 			if reqUser := r.Header.Get("X-Webspace-User"); reqUser != "" {
 				username = reqUser
@@ -134,6 +133,7 @@ func NewServer(config config.Config) *Server {
 	}
 	r.HandleFunc("/v1/images", s.apiImages).Methods("GET")
 	r.HandleFunc("/v1/webspace", s.apiCreateWebspace).Methods("POST")
+	r.HandleFunc("/v1/webspace", s.apiDeleteWebspace).Methods("DELETE")
 	r.NotFoundHandler = http.HandlerFunc(s.apiNotFound)
 
 	return s
