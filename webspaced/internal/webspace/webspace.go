@@ -182,7 +182,7 @@ func (m *Manager) Create(user string, image string, password string, sshKey stri
 		},
 		InstancePut: lxdApi.InstancePut{
 			Ephemeral: false,
-			Profiles:  []string{m.config.LXD.Profile},
+			Profiles:  []string{m.config.Webspaces.Profile},
 			Config: map[string]string{
 				lxdConfigKey: string(confJSON),
 			},

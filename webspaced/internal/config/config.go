@@ -55,13 +55,12 @@ type Config struct {
 	BindSocket      string    `mapstructure:"bind_socket"`
 	PwGrProxySocket string    `mapstructure:"pw_gr_proxy_socket"`
 	LXD             struct {
-		Socket         string
-		Profile        string
-		InstanceSuffix string `mapstructure:"instance_suffix"`
-		Network        string
+		Socket  string
+		Network string
 	}
 	Webspaces struct {
-		AdminGroup      string            `mapstructure:"admin_group"`
+		AdminGroup      string `mapstructure:"admin_group"`
+		Profile         string
 		NameTemplate    template.Template `mapstructure:"name_template"`
 		DomainSuffix    string            `mapstructure:"domain_suffix"`
 		ConfigDefaults  WebspaceConfig    `mapstructure:"config_defaults"`
