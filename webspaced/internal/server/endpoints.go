@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/gorilla/mux"
 	lxdApi "github.com/lxc/lxd/shared/api"
 	"github.com/netsoc/webspace-ng/webspaced/internal/webspace"
 )
@@ -49,8 +50,10 @@ func wsErrorToStatus(err error) int {
 	switch {
 	case errors.Is(err, webspace.ErrNotFound), errors.Is(err, webspace.ErrNotRunning):
 		return http.StatusNotFound
-	case errors.Is(err, webspace.ErrExists), errors.Is(err, webspace.ErrRunning):
+	case errors.Is(err, webspace.ErrExists), errors.Is(err, webspace.ErrRunning), errors.Is(err, webspace.ErrDomainUsed):
 		return http.StatusConflict
+	case errors.Is(err, webspace.ErrDomainUnverified):
+		return http.StatusBadRequest
 	default:
 		return http.StatusInternalServerError
 	}
@@ -136,4 +139,27 @@ func (s *Server) apiUpdateWebspaceConfig(w http.ResponseWriter, r *http.Request)
 	}
 
 	JSONResponse(w, oldConf, http.StatusOK)
+}
+
+func (s *Server) apiGetWebspaceDomains(w http.ResponseWriter, r *http.Request) {
+	ws := r.Context().Value(keyWebspace).(*webspace.Webspace)
+	JSONResponse(w, ws.Domains, http.StatusOK)
+}
+func (s *Server) apiWebspaceDomain(w http.ResponseWriter, r *http.Request) {
+	ws := r.Context().Value(keyWebspace).(*webspace.Webspace)
+	d := mux.Vars(r)["domain"]
+
+	var err error
+	switch r.Method {
+	case "POST":
+		err = ws.AddDomain(d)
+	case "DELETE":
+		err = ws.RemoveDomain(d)
+	}
+	if err != nil {
+		JSONErrResponse(w, err, wsErrorToStatus(err))
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }

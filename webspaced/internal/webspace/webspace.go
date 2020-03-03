@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 
 	lxd "github.com/lxc/lxd/client"
 	lxdApi "github.com/lxc/lxd/shared/api"
@@ -25,6 +26,12 @@ var ErrNotRunning = errors.New("not running")
 
 // ErrRunning indicates that a webspace is already running
 var ErrRunning = errors.New("already running")
+
+// ErrDomainUnverified indicates that the request domain could not be verified
+var ErrDomainUnverified = errors.New("verification failed")
+
+// ErrDomainUsed indicates that the requested domain is already in use
+var ErrDomainUsed = errors.New("used by a webspace")
 
 // convertLXDError is a HACK: LXD doesn't seem to return a code we can use to determine the error...
 func convertLXDError(err error) error {
@@ -170,6 +177,59 @@ func (w *Webspace) Save() error {
 	return nil
 }
 
+// AddDomain verifies and adds a new domain
+func (w *Webspace) AddDomain(domain string) error {
+	webspaces, err := w.manager.GetAll()
+	if err != nil {
+		return err
+	}
+
+	records, err := net.LookupTXT(domain)
+	if err != nil {
+		return fmt.Errorf("failed to lookup TXT records: %w", err)
+	}
+
+	correct := fmt.Sprintf("webspace:%v", w.User)
+	verified := false
+	for _, r := range records {
+		if r == correct {
+			verified = true
+		}
+	}
+	if !verified {
+		return fmt.Errorf("failed to add custom domain: %w", ErrDomainUnverified)
+	}
+
+	for _, w := range webspaces {
+		for _, d := range w.Domains {
+			if d == domain {
+				return fmt.Errorf("failed to add custom domain: %w", ErrDomainUsed)
+			}
+		}
+	}
+
+	w.Domains = append(w.Domains, domain)
+	if err := w.Save(); err != nil {
+		return err
+	}
+	return nil
+}
+
+// RemoveDomain removes an existing domain
+func (w *Webspace) RemoveDomain(domain string) error {
+	for i, d := range w.Domains {
+		if d == domain {
+			e := len(w.Domains) - 1
+			w.Domains[e], w.Domains[i] = w.Domains[i], w.Domains[e]
+			w.Domains = w.Domains[:e]
+
+			return w.Save()
+		}
+	}
+
+	return fmt.Errorf("failed to remove domain: %w", ErrNotFound)
+}
+
 // Manager manages webspace containers
 type Manager struct {
 	config *config.Config
@@ -199,6 +259,22 @@ func (m *Manager) onLxdEvent(e lxdApi.Event) {
 		"type":    e.Type,
 		"details": details,
 	}).Debug("lxd event")
+}
+
+func (m *Manager) instanceToWebspace(i *lxdApi.Instance) (*Webspace, error) {
+	w := &Webspace{
+		manager: m,
+	}
+
+	confJSON, ok := i.Config[lxdConfigKey]
+	if !ok {
+		return nil, fmt.Errorf("failed to retrieve webspace instance configuration from LXD")
+	}
+	if err := json.Unmarshal([]byte(confJSON), w); err != nil {
+		return nil, fmt.Errorf("failed to parse webspace configuration stored in LXD: %w", err)
+	}
+
+	return w, nil
 }
 
 func (m *Manager) lxdState(name string, action string) error {
@@ -232,15 +308,29 @@ func (m *Manager) Get(user string) (*Webspace, error) {
 		return nil, fmt.Errorf("failed to get webspace instance: %w", convertLXDError(err))
 	}
 
-	confJSON, ok := i.Config[lxdConfigKey]
-	if !ok {
-		return nil, fmt.Errorf("failed to retrieve webspace instance configuration from LXD")
-	}
-	if err := json.Unmarshal([]byte(confJSON), w); err != nil {
-		return nil, fmt.Errorf("failed to parse webspace configuration stored in LXD: %w", err)
+	return m.instanceToWebspace(i)
+}
+
+// GetAll retrieves all the webspaces
+func (m *Manager) GetAll() ([]*Webspace, error) {
+	instances, err := m.lxd.GetInstances(lxdApi.InstanceTypeContainer)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve webspaces from LXD: %w", convertLXDError(err))
 	}
 
-	return w, nil
+	var webspaces []*Webspace
+	for _, i := range instances {
+		if _, ok := i.Config[lxdConfigKey]; !ok {
+			continue
+		}
+
+		w, err := m.instanceToWebspace(&i)
+		if err != nil {
+			return nil, err
+		}
+		webspaces = append(webspaces, w)
+	}
+	return webspaces, nil
 }
 
 // Create creates a new webspace container via LXD
