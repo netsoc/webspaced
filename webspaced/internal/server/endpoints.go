@@ -73,14 +73,13 @@ func (s *Server) apiCreateWebspace(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user := r.Context().Value(keyUser).(string)
-	_, err := s.Webspaces.Create(user, body.Image, body.Password, body.SSHKey)
+	ws, err := s.Webspaces.Create(user, body.Image, body.Password, body.SSHKey)
 	if err != nil {
 		JSONErrResponse(w, err, wsErrorToStatus(err))
 		return
 	}
 
-	// TODO: Return SSH port forward
-	w.WriteHeader(http.StatusNoContent)
+	JSONResponse(w, ws, http.StatusCreated)
 }
 
 func (s *Server) apiDeleteWebspace(w http.ResponseWriter, r *http.Request) {
