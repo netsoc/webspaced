@@ -83,5 +83,17 @@ func (s *Server) apiCreateWebspace(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) apiDeleteWebspace(w http.ResponseWriter, r *http.Request) {
+	user := r.Context().Value(keyUser).(string)
+	ws, err := s.Webspaces.Get(user)
+	if err != nil {
+		JSONErrResponse(w, err, wsErrorToStatus(err))
+		return
+	}
+
+	if err := ws.Delete(); err != nil {
+		JSONErrResponse(w, err, wsErrorToStatus(err))
+		return
+	}
+
 	w.WriteHeader(http.StatusNoContent)
 }
