@@ -55,9 +55,7 @@ Request:
 
 Response:
 
-Either HTTP 204 (No Content) and an empty response body (if `sshKey` was not present in the request) or HTTP 201
-(Created) and the following:
- - `sshPort`: The external port for SSH access
+HTTP 201 Created and a response body identical to `GET /v1/webspace`.
 
 Errors:
  - Webspace already exists (HTTP 409 Conflict)
@@ -180,10 +178,10 @@ Errors:
  - Attempt to delete default domain (HTTP 400 Bad Request)
 
 ## `/v1/webspace/ports`
-<a name="ports-get-res"></a>### GET
+### GET
 Obtain the current list of port forwardings for the webspace.
 
-Response:
+<a name="ports-get-res"></a>Response:
 
 HTTP 200 with a map of external ports to internal ones.
 
