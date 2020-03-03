@@ -13,6 +13,8 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+const lxdConfigKey = "user._webspaced"
+
 // ErrNotFound indicates that a resource was not found
 var ErrNotFound = errors.New("not found")
 
@@ -120,12 +122,19 @@ func (m *Manager) Create(user string, image string, password string, sshKey stri
 	w := &Webspace{
 		manager: m,
 		User:    user,
+		Config:  m.config.Webspaces.ConfigDefaults,
+		Domains: []string{},
+		Ports:   map[uint16]uint16{},
 	}
 	n, err := w.InstanceName()
 	if err != nil {
 		return nil, err
 	}
 
+	confJSON, err := json.Marshal(w)
+	if err != nil {
+		return nil, fmt.Errorf("failed to serialize webspace config for LXD: %w", err)
+	}
 	op, err := m.lxd.CreateInstance(lxdApi.InstancesPost{
 		Type: lxdApi.InstanceTypeContainer,
 		Name: n,
@@ -136,6 +145,9 @@ func (m *Manager) Create(user string, image string, password string, sshKey stri
 		InstancePut: lxdApi.InstancePut{
 			Ephemeral: false,
 			Profiles:  []string{m.config.LXD.Profile},
+			Config: map[string]string{
+				lxdConfigKey: string(confJSON),
+			},
 		},
 	})
 	if err != nil {
