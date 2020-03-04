@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"strconv"
 
 	"github.com/gorilla/mux"
 	lxdApi "github.com/lxc/lxd/shared/api"
@@ -50,9 +51,10 @@ func wsErrorToStatus(err error) int {
 	switch {
 	case errors.Is(err, webspace.ErrNotFound), errors.Is(err, webspace.ErrNotRunning):
 		return http.StatusNotFound
-	case errors.Is(err, webspace.ErrExists), errors.Is(err, webspace.ErrRunning), errors.Is(err, webspace.ErrDomainUsed):
+	case errors.Is(err, webspace.ErrExists), errors.Is(err, webspace.ErrRunning), errors.Is(err, webspace.ErrUsed):
 		return http.StatusConflict
-	case errors.Is(err, webspace.ErrDomainUnverified):
+	case errors.Is(err, webspace.ErrDomainUnverified), errors.Is(err, webspace.ErrBadPort),
+		errors.Is(err, webspace.ErrTooManyPorts):
 		return http.StatusBadRequest
 	default:
 		return http.StatusInternalServerError
@@ -162,4 +164,71 @@ func (s *Server) apiWebspaceDomain(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+type addImplicitPortRes struct {
+	EPort uint16 `json:"ePort"`
+}
+
+func (s *Server) apiGetWebspacePorts(w http.ResponseWriter, r *http.Request) {
+	ws := r.Context().Value(keyWebspace).(*webspace.Webspace)
+	JSONResponse(w, ws.Ports, http.StatusOK)
+}
+func (s *Server) apiWebspacePorts(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	explicit := false
+	eStr, iStr := "0", "0"
+	if e, ok := vars["ePort"]; ok {
+		explicit = true
+		eStr = e
+		iStr = vars["iPort"]
+	} else {
+		if r.Method == "DELETE" {
+			eStr = vars["port"]
+		}
+		iStr = vars["port"]
+	}
+
+	e, err := strconv.ParseUint(eStr, 10, 16)
+	if err != nil {
+		JSONErrResponse(w, webspace.ErrBadPort, http.StatusBadRequest)
+		return
+	}
+	external := uint16(e)
+
+	i, err := strconv.ParseUint(iStr, 10, 16)
+	if err != nil {
+		JSONErrResponse(w, webspace.ErrBadPort, http.StatusBadRequest)
+		return
+	}
+	internal := uint16(i)
+
+	if explicit && external == 0 {
+		JSONErrResponse(w, webspace.ErrBadPort, http.StatusBadRequest)
+		return
+	}
+
+	ws := r.Context().Value(keyWebspace).(*webspace.Webspace)
+	switch r.Method {
+	case "POST":
+		external, err = ws.AddPort(external, internal)
+		if err != nil {
+			JSONErrResponse(w, err, wsErrorToStatus(err))
+			return
+		}
+
+		if !explicit {
+			JSONResponse(w, addImplicitPortRes{external}, http.StatusCreated)
+		} else {
+			w.WriteHeader(http.StatusCreated)
+		}
+	case "DELETE":
+		err = ws.RemovePort(external)
+		if err != nil {
+			JSONErrResponse(w, err, wsErrorToStatus(err))
+			return
+		}
+
+		w.WriteHeader(http.StatusNoContent)
+	}
 }

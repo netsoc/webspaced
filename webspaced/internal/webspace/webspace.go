@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/rand"
 	"net"
 
 	lxd "github.com/lxc/lxd/client"
@@ -30,8 +31,14 @@ var ErrRunning = errors.New("already running")
 // ErrDomainUnverified indicates that the request domain could not be verified
 var ErrDomainUnverified = errors.New("verification failed")
 
-// ErrDomainUsed indicates that the requested domain is already in use
-var ErrDomainUsed = errors.New("used by a webspace")
+// ErrUsed indicates that the requested resource is already in use by a webspace
+var ErrUsed = errors.New("used by a webspace")
+
+// ErrTooManyPorts indicates that too many port forwards are configured
+var ErrTooManyPorts = errors.New("port forward limit reached")
+
+// ErrBadPort indicates that the provided port is invalid
+var ErrBadPort = errors.New("invalid port")
 
 // convertLXDError is a HACK: LXD doesn't seem to return a code we can use to determine the error...
 func convertLXDError(err error) error {
@@ -179,11 +186,6 @@ func (w *Webspace) Save() error {
 
 // AddDomain verifies and adds a new domain
 func (w *Webspace) AddDomain(domain string) error {
-	webspaces, err := w.manager.GetAll()
-	if err != nil {
-		return err
-	}
-
 	records, err := net.LookupTXT(domain)
 	if err != nil {
 		return fmt.Errorf("failed to lookup TXT records: %w", err)
@@ -200,10 +202,15 @@ func (w *Webspace) AddDomain(domain string) error {
 		return fmt.Errorf("failed to add custom domain: %w", ErrDomainUnverified)
 	}
 
+	webspaces, err := w.manager.GetAll()
+	if err != nil {
+		return err
+	}
+
 	for _, w := range webspaces {
 		for _, d := range w.Domains {
 			if d == domain {
-				return fmt.Errorf("failed to add custom domain: %w", ErrDomainUsed)
+				return fmt.Errorf("failed to add custom domain: %w", ErrUsed)
 			}
 		}
 	}
@@ -228,6 +235,68 @@ func (w *Webspace) RemoveDomain(domain string) error {
 	}
 
 	return fmt.Errorf("failed to remove domain: %w", ErrNotFound)
+}
+
+// AddPort creates a port forwarding
+func (w *Webspace) AddPort(external uint16, internal uint16) (uint16, error) {
+	if len(w.Ports) == int(w.manager.config.Webspaces.Ports.Max) {
+		return 0, fmt.Errorf("failed to add port forward: %w", ErrTooManyPorts)
+	}
+	if internal == 0 {
+		return 0, fmt.Errorf("failed to add port forward: %w (internal port cannot be 0)", ErrBadPort)
+	}
+	if external != 0 &&
+		(external < w.manager.config.Webspaces.Ports.Start || external > w.manager.config.Webspaces.Ports.End) {
+		return 0, fmt.Errorf("failed to add port forward: %w (external port out of range %v-%v)", ErrBadPort,
+			w.manager.config.Webspaces.Ports.Start, w.manager.config.Webspaces.Ports.End)
+	}
+
+	webspaces, err := w.manager.GetAll()
+	if err != nil {
+		return 0, err
+	}
+
+	var allPorts []uint16
+	for _, w := range webspaces {
+		for e := range w.Ports {
+			if e == external {
+				return 0, fmt.Errorf("failed to add port forward: %w", ErrUsed)
+			}
+
+			if external == 0 {
+				allPorts = append(allPorts, e)
+			}
+		}
+	}
+
+	if external == 0 {
+		start := w.manager.config.Webspaces.Ports.Start
+		end := (w.manager.config.Webspaces.Ports.End - uint16(len(allPorts)) + 1)
+		external = start + uint16(rand.Int31n(int32(end-start)))
+
+		for _, p := range allPorts {
+			if external < p {
+				break
+			}
+			external++
+		}
+	}
+
+	w.Ports[external] = internal
+	if err := w.Save(); err != nil {
+		return 0, err
+	}
+	return external, nil
+}
+
+// RemovePort removes a port forwarding
+func (w *Webspace) RemovePort(external uint16) error {
+	if _, ok := w.Ports[external]; !ok {
+		return fmt.Errorf("failed to remove port forward: %w", ErrNotFound)
+	}
+
+	delete(w.Ports, external)
+	return w.Save()
 }
 
 // Manager manages webspace containers
