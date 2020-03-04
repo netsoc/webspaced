@@ -95,7 +95,7 @@ func (w *Webspace) Delete() error {
 
 	state, _, err := w.manager.lxd.GetInstanceState(n)
 	if err != nil {
-		return fmt.Errorf("failed to get webspace state: %w", err)
+		return fmt.Errorf("failed to get LXD instance state: %w", err)
 	}
 
 	if state.StatusCode == lxdApi.Running {
@@ -106,11 +106,11 @@ func (w *Webspace) Delete() error {
 
 	op, err := w.manager.lxd.DeleteInstance(n)
 	if err != nil {
-		return fmt.Errorf("failed to delete webspace instance: %w", err)
+		return fmt.Errorf("failed to delete LXD instance: %w", err)
 	}
 
 	if err := op.Wait(); err != nil {
-		return fmt.Errorf("failed to delete webspace instance: %w", err)
+		return fmt.Errorf("failed to delete LXD instance: %w", err)
 	}
 
 	return nil
@@ -124,7 +124,7 @@ func (w *Webspace) Boot() error {
 	}
 
 	if err := w.manager.lxdState(n, "start"); err != nil {
-		return fmt.Errorf("failed to boot webspace: %w", convertLXDError(err))
+		return err
 	}
 	return nil
 }
@@ -137,7 +137,7 @@ func (w *Webspace) Reboot() error {
 	}
 
 	if err := w.manager.lxdState(n, "restart"); err != nil {
-		return fmt.Errorf("failed to reboot webspace: %w", convertLXDError(err))
+		return err
 	}
 	return nil
 }
@@ -150,7 +150,7 @@ func (w *Webspace) Shutdown() error {
 	}
 
 	if err := w.manager.lxdState(n, "stop"); err != nil {
-		return fmt.Errorf("failed to shutdown webspace: %w", convertLXDError(err))
+		return err
 	}
 	return nil
 }
@@ -164,7 +164,7 @@ func (w *Webspace) Save() error {
 
 	i, _, err := w.manager.lxd.GetInstance(n)
 	if err != nil {
-		return fmt.Errorf("failed to get webspace config from LXD: %w", convertLXDError(err))
+		return fmt.Errorf("failed to get instance from LXD: %w", convertLXDError(err))
 	}
 
 	lxdConf, err := w.lxdConfig()
@@ -175,11 +175,11 @@ func (w *Webspace) Save() error {
 	i.InstancePut.Config[lxdConfigKey] = lxdConf
 	op, err := w.manager.lxd.UpdateInstance(n, i.InstancePut, "")
 	if err != nil {
-		return fmt.Errorf("failed to update LXD config: %w", convertLXDError(err))
+		return fmt.Errorf("failed to update LXD instance: %w", convertLXDError(err))
 	}
 
 	if err := op.Wait(); err != nil {
-		return fmt.Errorf("failed to update LXD config: %w", convertLXDError(err))
+		return fmt.Errorf("failed to update LXD instance: %w", convertLXDError(err))
 	}
 	return nil
 }
@@ -199,7 +199,7 @@ func (w *Webspace) AddDomain(domain string) error {
 		}
 	}
 	if !verified {
-		return fmt.Errorf("failed to add custom domain: %w", ErrDomainUnverified)
+		return ErrDomainUnverified
 	}
 
 	webspaces, err := w.manager.GetAll()
@@ -210,7 +210,7 @@ func (w *Webspace) AddDomain(domain string) error {
 	for _, w := range webspaces {
 		for _, d := range w.Domains {
 			if d == domain {
-				return fmt.Errorf("failed to add custom domain: %w", ErrUsed)
+				return ErrUsed
 			}
 		}
 	}
@@ -234,20 +234,20 @@ func (w *Webspace) RemoveDomain(domain string) error {
 		}
 	}
 
-	return fmt.Errorf("failed to remove domain: %w", ErrNotFound)
+	return ErrNotFound
 }
 
 // AddPort creates a port forwarding
 func (w *Webspace) AddPort(external uint16, internal uint16) (uint16, error) {
 	if len(w.Ports) == int(w.manager.config.Webspaces.Ports.Max) {
-		return 0, fmt.Errorf("failed to add port forward: %w", ErrTooManyPorts)
+		return 0, ErrTooManyPorts
 	}
 	if internal == 0 {
-		return 0, fmt.Errorf("failed to add port forward: %w (internal port cannot be 0)", ErrBadPort)
+		return 0, fmt.Errorf("%w (internal port cannot be 0)", ErrBadPort)
 	}
 	if external != 0 &&
 		(external < w.manager.config.Webspaces.Ports.Start || external > w.manager.config.Webspaces.Ports.End) {
-		return 0, fmt.Errorf("failed to add port forward: %w (external port out of range %v-%v)", ErrBadPort,
+		return 0, fmt.Errorf("%w (external port out of range %v-%v)", ErrBadPort,
 			w.manager.config.Webspaces.Ports.Start, w.manager.config.Webspaces.Ports.End)
 	}
 
@@ -260,7 +260,7 @@ func (w *Webspace) AddPort(external uint16, internal uint16) (uint16, error) {
 	for _, w := range webspaces {
 		for e := range w.Ports {
 			if e == external {
-				return 0, fmt.Errorf("failed to add port forward: %w", ErrUsed)
+				return 0, ErrUsed
 			}
 
 			if external == 0 {
@@ -292,7 +292,7 @@ func (w *Webspace) AddPort(external uint16, internal uint16) (uint16, error) {
 // RemovePort removes a port forwarding
 func (w *Webspace) RemovePort(external uint16) error {
 	if _, ok := w.Ports[external]; !ok {
-		return fmt.Errorf("failed to remove port forward: %w", ErrNotFound)
+		return ErrNotFound
 	}
 
 	delete(w.Ports, external)
@@ -352,11 +352,11 @@ func (m *Manager) lxdState(name string, action string) error {
 		Timeout: -1,
 	}, "")
 	if err != nil {
-		return nil
+		return fmt.Errorf("failed to change LXD instance state: %w", convertLXDError(err))
 	}
 
 	if err := op.Wait(); err != nil {
-		return err
+		return fmt.Errorf("failed to change LXD instance state: %w", convertLXDError(err))
 	}
 	return nil
 }
@@ -374,7 +374,7 @@ func (m *Manager) Get(user string) (*Webspace, error) {
 
 	i, _, err := m.lxd.GetInstance(n)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get webspace instance: %w", convertLXDError(err))
+		return nil, fmt.Errorf("failed to get LXD instance: %w", convertLXDError(err))
 	}
 
 	return m.instanceToWebspace(i)
@@ -384,7 +384,7 @@ func (m *Manager) Get(user string) (*Webspace, error) {
 func (m *Manager) GetAll() ([]*Webspace, error) {
 	instances, err := m.lxd.GetInstances(lxdApi.InstanceTypeContainer)
 	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve webspaces from LXD: %w", convertLXDError(err))
+		return nil, fmt.Errorf("failed to retrieve LXD instances: %w", convertLXDError(err))
 	}
 
 	var webspaces []*Webspace
@@ -436,11 +436,11 @@ func (m *Manager) Create(user string, image string, password string, sshKey stri
 		},
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to create webspace instance: %w", convertLXDError(err))
+		return nil, fmt.Errorf("failed to create LXD instance: %w", convertLXDError(err))
 	}
 
 	if err := op.Wait(); err != nil {
-		return nil, fmt.Errorf("failed to create webspace instance: %w", convertLXDError(err))
+		return nil, fmt.Errorf("failed to create LXD instance: %w", convertLXDError(err))
 	}
 
 	if password != "" {
