@@ -199,23 +199,11 @@ HTTP 201 (Created)
 Errors:
  - Webspace does not exist (HTTP 404 Not Found)
  - Invalid port(s) (HTTP 400 Bad Request)
- - External port in use (HTTP 400 Bad Request)
+ - External port in use (HTTP 409 Conflict)
 
-### DELETE
-Remove a port forwarding from external port `ePort` to internal port `iPort`.
-
-Response:
-
-HTTP 204 (No Content)
-
-Errors:
- - Webspace does not exist (HTTP 404 Not Found)
- - Invalid port(s) (HTTP 400 Bad Request)
- - Port mapping does not exist (HTTP 404 Not Found)
-
-## `/v1/webspace/ports/<iPort>`
+## `/v1/webspace/ports/<port>`
 ### POST
-Create a port forwarding from a random external port to internal port `<iPort>`.
+Create a port forwarding from a random external port to internal port `<port>`.
 
 Response:
 
@@ -225,3 +213,15 @@ HTTP 201 with the following:
 Errors:
  - Webspace does not exist (HTTP 404 Not Found)
  - Invalid port (HTTP 400 Bad Request)
+
+### DELETE
+Remove a port forwarding from external port `port`.
+
+Response:
+
+HTTP 204 (No Content)
+
+Errors:
+ - Webspace does not exist (HTTP 404 Not Found)
+ - Invalid port(s) (HTTP 400 Bad Request)
+ - Port mapping does not exist (HTTP 404 Not Found)
