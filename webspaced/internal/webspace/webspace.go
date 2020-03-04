@@ -79,6 +79,29 @@ func (w *Webspace) lxdConfig() (string, error) {
 	return string(confJSON), nil
 }
 
+func (w *Webspace) simpleExec(cmd string) error {
+	n, err := w.InstanceName()
+	if err != nil {
+		return err
+	}
+
+	op, err := w.manager.lxd.ExecInstance(n, lxdApi.InstanceExecPost{
+		Command: []string{"sh", "-c", cmd},
+	}, nil)
+	if err != nil {
+		return fmt.Errorf("failed to execute command in LXD instance: %w", convertLXDError(err))
+	}
+	if err := op.Wait(); err != nil {
+		return fmt.Errorf("failed to execute command in LXD instance: %w", convertLXDError(err))
+	}
+
+	code := op.Get().Metadata["return"]
+	if code != 0. {
+		return fmt.Errorf("failed to execute command in LXD instance: non-zero exit code %v", code)
+	}
+	return nil
+}
+
 // InstanceName uses the template to calculate the name of the instance
 func (w *Webspace) InstanceName() (string, error) {
 	buf := bytes.NewBufferString("")
@@ -450,31 +473,32 @@ func (m *Manager) Create(user string, image string, password string, sshKey stri
 		return nil, fmt.Errorf("failed to create LXD instance: %w", convertLXDError(err))
 	}
 
-	if password != "" {
+	if password != "" || sshKey != "" {
 		if err := w.Boot(); err != nil {
 			return nil, err
 		}
-
-		op, err := m.lxd.ExecInstance(n, lxdApi.InstanceExecPost{
-			Command: []string{"sh", "-c", fmt.Sprintf(`echo "root:%v" | chpasswd`, password)},
-		}, nil)
-		if err != nil {
-			return nil, fmt.Errorf("failed to set root password: %w", convertLXDError(err))
+	}
+	if password != "" {
+		if err := w.simpleExec(fmt.Sprintf(`echo "root:%v" | chpasswd`, password)); err != nil {
+			return nil, fmt.Errorf("failed to set root password: %w", err)
 		}
-		if err := op.Wait(); err != nil {
-			return nil, fmt.Errorf("failed to set root password: %w", convertLXDError(err))
-		}
-
-		code := op.Get().Metadata["return"]
-		if code != 0. {
-			return nil, fmt.Errorf("failed to change root password: exit code %v", code)
+	}
+	if sshKey != "" {
+		// TODO: install sshd
+		cmd := fmt.Sprintf(`mkdir -p /root/.ssh && echo "%v" > /root/.ssh/authorized_keys`, sshKey)
+		if err := w.simpleExec(cmd); err != nil {
+			return nil, fmt.Errorf("failed to store ssh public key: %w", err)
 		}
 
+		if _, err := w.AddPort(0, 22); err != nil {
+			return nil, fmt.Errorf("failed to add SSH port forward: %w", err)
+		}
+	}
+	if password != "" || sshKey != "" {
 		if err := w.Shutdown(); err != nil {
 			return nil, err
 		}
 	}
 
-	// TODO: Add SSH Key
 	return w, nil
 }
