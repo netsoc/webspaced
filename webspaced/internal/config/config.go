@@ -62,7 +62,7 @@ type Config struct {
 		AdminGroup      string `mapstructure:"admin_group"`
 		Profile         string
 		NameTemplate    template.Template `mapstructure:"name_template"`
-		DomainSuffix    string            `mapstructure:"domain_suffix"`
+		Domain          string            `mapstructure:"domain"`
 		ConfigDefaults  WebspaceConfig    `mapstructure:"config_defaults"`
 		MaxStartupDelay uint16            `mapstructure:"max_startup_delay"`
 		RunLimit        uint              `mapstructure:"run_limit"`

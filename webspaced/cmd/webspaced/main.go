@@ -20,7 +20,7 @@ func init() {
 	viper.SetDefault("webspaces.admin_group", "webspace-admin")
 	viper.SetDefault("webspaces.profile", "webspace")
 	viper.SetDefault("webspaces.name_template", "{{.User}}-ws")
-	viper.SetDefault("webspaces.domain_suffix", ".ng.localhost")
+	viper.SetDefault("webspaces.domain", "ng.localhost")
 	viper.SetDefault("webspaces.config_defaults.startup_delay", 3)
 	viper.SetDefault("webspaces.config_defaults.http_port", 80)
 	viper.SetDefault("webspaces.config_defaults.https_port", 0)

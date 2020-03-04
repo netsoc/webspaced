@@ -22,6 +22,9 @@ var ErrNotFound = errors.New("not found")
 // ErrExists indicates that a resource already exists
 var ErrExists = errors.New("already exists")
 
+// ErrUsed indicates that the requested resource is already in use by a webspace
+var ErrUsed = errors.New("used by a webspace")
+
 // ErrNotRunning indicates that a webspace is not running
 var ErrNotRunning = errors.New("not running")
 
@@ -31,8 +34,8 @@ var ErrRunning = errors.New("already running")
 // ErrDomainUnverified indicates that the request domain could not be verified
 var ErrDomainUnverified = errors.New("verification failed")
 
-// ErrUsed indicates that the requested resource is already in use by a webspace
-var ErrUsed = errors.New("used by a webspace")
+// ErrDefaultDomain indicates an attempt to remove the default domain
+var ErrDefaultDomain = errors.New("cannot remove the default domain")
 
 // ErrTooManyPorts indicates that too many port forwards are configured
 var ErrTooManyPorts = errors.New("port forward limit reached")
@@ -224,6 +227,10 @@ func (w *Webspace) AddDomain(domain string) error {
 
 // RemoveDomain removes an existing domain
 func (w *Webspace) RemoveDomain(domain string) error {
+	if domain == fmt.Sprintf("%v.%v", w.User, w.manager.config.Webspaces.Domain) {
+		return ErrDefaultDomain
+	}
+
 	for i, d := range w.Domains {
 		if d == domain {
 			e := len(w.Domains) - 1
@@ -408,7 +415,7 @@ func (m *Manager) Create(user string, image string, password string, sshKey stri
 		manager: m,
 		User:    user,
 		Config:  m.config.Webspaces.ConfigDefaults,
-		Domains: []string{},
+		Domains: []string{fmt.Sprintf("%v.%v", user, m.config.Webspaces.Domain)},
 		Ports:   map[uint16]uint16{},
 	}
 	n, err := w.InstanceName()
