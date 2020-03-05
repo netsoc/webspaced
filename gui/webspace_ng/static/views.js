@@ -1,5 +1,5 @@
 Vue.component('NotFound', {
-  template: `
+    template: `
     <div>
       <h1>Not Found</h1>
       <p class="lead">Couldn't find that page, sorry.</p>
@@ -9,7 +9,7 @@ Vue.component('NotFound', {
 });
 
 Vue.component('HomeView', {
-  template: `
+    template: `
     <div>
       <h1>Home</h1>
       <p class="lead">Hello, world!</p>
@@ -18,7 +18,7 @@ Vue.component('HomeView', {
 });
 
 Vue.component('Login', {
-  template: `
+    template: `
   <template>
     <div class ="center">
       <img class="center" src="/static/images/logo.jpg" alt="Netsoc Logo">
@@ -33,5 +33,15 @@ Vue.component('Login', {
       <button class= "login-button center" type="button"> Login </button>
     </div>
   </template>
+  `
+});
+
+
+Vue.component('Welcome', {
+    template: `
+  <div>
+    <h1 class="center">Home</h1> 
+    <p class="lead"> Hello, world! </p> 
+  </div>
   `
 });
