@@ -17,6 +17,51 @@ Vue.component('HomeView', {
   `
 });
 
+Vue.component('Dashboard', {
+    template: `
+    <div>
+    <div class="sidenav">
+      <i class="fa fa-home fa-lg"> <a href="#"> Dashboard </a></i>
+      <i class="fa fa-terminal fa-lg"> <a href="#"> Console </a></i>
+      <i class="fa fa-cog fa-lg"> <a href="#"> Configs </a></i>
+      <i class="fa fa-globe fa-lg"> <a href="#"> Domains </a></i>
+      <i class="fa fa-plug fa-lg"> <a href="#"> Ports </a></i>
+    </div>
+    </div>
+  `
+});
+
+
+Vue.component('Welcome', {
+    template: `
+    <h1 style = "text-align: center"> Welcome to your dashboard </h1> 
+    <h4 style = "text-align: center"> Setup your environment to use your webspace </h4> 
+    <button class = "center"type = "button"> Get Started </button>
+    <footer style = "text-align: center"> Brought to you by DU Netsoc </footer>
+  `
+});
+
+
+Vue.component('Operating System', {
+    template: `
+    <div class = "container">
+      <div class = "row">
+        <div class = "col"> Ubuntu </div> 
+        <div class = "col"> Arch </div> 
+        <div class = "col"> Redfin </div> 
+      </div> 
+      <br>
+      <div class = "row">
+        <div class = "col"> Fedora </div> 
+        <div class = "col"> Centos </div> 
+        <div class = "col"> Alpine </div> 
+      </div>
+    </div> 
+    <button class = "center"type = "button"> Next </button> 
+    <footer style = "text-align: center"> Brought to you by DU Netsoc</footer>
+  `
+});
+
 Vue.component('Login', {
     template: `
   <template>
@@ -33,15 +78,5 @@ Vue.component('Login', {
       <button class= "login-button center" type="button"> Login </button>
     </div>
   </template>
-  `
-});
-
-
-Vue.component('Welcome', {
-    template: `
-  <div>
-    <h1 class="center">Home</h1> 
-    <p class="lead"> Hello, world! </p> 
-  </div>
   `
 });

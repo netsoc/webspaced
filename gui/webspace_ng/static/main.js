@@ -9,8 +9,16 @@ const router = new VueRouter({
             component: Vue.component('Login')
         },
         {
-            path: '/#/welcome',
+            path: '/dashboard',
+            component: Vue.component('Dashboard')
+        },
+        {
+            path: '/welcome',
             component: Vue.component('Welcome')
+        },
+        {
+            path: '/choose-os',
+            component: Vue.component('Operating System')
         },
         {
             path: '*',
