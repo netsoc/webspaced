@@ -63,6 +63,16 @@ body {
     vertical-align: center;
     line-height: 90px; 
   }
+
+  .sidenav i {
+    text-decoration: none;
+    color: #818181;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    vertical-align: center;
+  }
   
   /* When you mouse over the navigation links, change their color */
   .sidenav a:hover {
@@ -74,6 +84,7 @@ body {
     margin-left: 160px; /* Same as the width of the sidebar */
     padding: 0px 10px;
   }
+
   
   /* On smaller screens, where height is less than 450px, change the style of the sidebar (less padding and a smaller font size) */
   @media screen and (max-height: 450px) {
