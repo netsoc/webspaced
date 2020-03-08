@@ -10,6 +10,10 @@ const router = new VueRouter({
       component: Vue.component('Login') 
     },
     { 
+      path: '/dashboard', 
+      component: Vue.component('Dashboard') 
+    },
+    { 
       path: '*', 
       component: Vue.component('NotFound') 
     },

@@ -7,12 +7,25 @@ Vue.component('NotFound', {
     </div>
   `
 });
-1
+
 Vue.component('HomeView', {
   template: `
     <div>
       <h1>Home</h1>
       <p class="lead">Hello, world!</p>
+    </div>
+  `
+});
+
+Vue.component('Dashboard', {
+  template: `
+    <div>
+    <div class="sidenav">
+      <a href="#">Homepage</a>
+      <a href="#">Console</a>
+      <a href="#">Configuration</a>
+      <a href="#">Domains</a>
+    </div>
     </div>
   `
 });
