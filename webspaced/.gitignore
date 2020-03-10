@@ -1,2 +1,4 @@
 /bin/*
 !/bin/.gitkeep
+/pw_gr_proxy
+/config.yaml
