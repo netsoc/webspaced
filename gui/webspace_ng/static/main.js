@@ -21,6 +21,14 @@ const router = new VueRouter({
             component: Vue.component('Operating System')
         },
         {
+            path: '/create-root',
+            component: Vue.component('Create Root PW')
+        },
+        {
+            path: '/congrats',
+            component: Vue.component('Congratulations')
+        },
+        {
             path: '*',
             component: Vue.component('NotFound')
         },

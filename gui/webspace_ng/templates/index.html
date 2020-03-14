@@ -13,14 +13,11 @@
 
 <body>
     <div id="app">
-        <nav class="navbar navbar-dark bg-dark navbar-expand-md fixed-top">
+        <nav class="navbar navbar-expand-md fixed-top">
             <router-link class="navbar-brand" to="/"></router-link>
-            <div class="navbar-nav">
-                <router-link class="nav-item nav-link" active-class="active" to="/">Home</router-link>
-                <router-link class="nav-item nav-link" active-class="active" to="/login">Login</router-link>
-                <router-link class="nav-item nav-link" active-class="active" to="/dashboard">Sidebar</router-link>
-                <router-link class="nav-item nav-link" active-class="active" to="/choose-os">Operating Sys</router-link>
-                <router-link class="nav-item nav-link" active-class="active" to="/welcome">Welcome</router-link>
+            <div class="navbar-nav main-nav">
+                <router-link class="nav-item nav-link main-nav" active-class="active" to="/login">Login</router-link>
+                <router-link class="nav-item nav-link main-nav" active-class="active" to="/welcome">About</router-link>
             </div>
         </nav>
         <main role="main" class="container">
