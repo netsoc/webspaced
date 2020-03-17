@@ -156,14 +156,14 @@ input[type=text] {
 
 /* The navigation menu links */
 
-.sidenav a {
+.sidenav {
     height: 100%; 
     width: 180px; /* Set the width of the sidebar */
     position: fixed; /* Fixed Sidebar (stay in place on scroll) */
     z-index: 1; /* Stay on top */
     top: 0; 
     left: 0;
-    background-color: #343a40; 
+    background-color: #fff; 
     overflow-x: hidden; 
     padding-top: 250px;
   }
