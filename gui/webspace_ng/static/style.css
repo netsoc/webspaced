@@ -2,6 +2,58 @@ body {
     padding-top: 5rem;
 }
 
+
+/* POSITIONING  */
+
+.center {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.center-img {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    width: 50%;
+}
+
+.bottom-right-corner {
+    position: absolute;
+    bottom: 20px;
+    right: 50px;
+    margin-top: 2em;
+}
+
+.bottom-left-corner {
+    position: absolute;
+    bottom: 20px;
+    left: 50px;
+    margin-top: 2em;
+}
+
+.bottom-center {
+    position: absolute;
+    bottom: 20px;
+}
+
+
+/* Style page content */
+
+.main {
+    margin-left: 160px;
+    /* Same as the width of the sidebar */
+    padding: 0px 10px;
+}
+
+.main-nav {
+    color: #060A1E;
+    font-size: 20px;
+}
+
+
+/* LOGIN PAGE  */
+
 .text-line {
     background-color: transparent;
     color: #eeeeee;
@@ -10,34 +62,101 @@ body {
     border-top: none;
     border-left: none;
     border-right: none;
-    border-bottom: solid #eeeeee 1px;
-    padding: 3px 10px;
+    border-bottom: solid #eeeeee 0.5px;
 }
 
-.login-box{
-    width: 300px;
+#login-logo {
+    margin-top: 75px;
+    margin-bottom: 65px;
+}
+
+.login-box {
+    width: 446px;
     outline: none;
     border-top-style: hidden;
     border-right-style: hidden;
     border-left-style: hidden;
-    border-bottom-style: groove;
-    background-color: #eee;
+    border-bottom: solid #c5c5c5 1px;
+    margin-bottom: 65px;
 }
 
-.center{
-    display: block;
-    margin-left: auto;
-    margin-right: auto;
+.button {
+    width: 12em;
+    background-color: #fff;
+    color: #060A1E;
+    border: solid #060A1E 1.5px;
+    text-align: center;
+    font-size: 18px;
+    padding: 12px 10px;
+    margin: auto;
+    border-radius: 3.5px;
+    text-decoration: none;
 }
 
-.login-button{
-    background-color: white;
-    color: black;
-    border: 2px solid #eee; /* Green */
+.button:hover {
+    background-color: #060A1E;
+    color: #fff;
+    text-decoration: none;
 }
 
-/* The sidebar menu */
-.sidenav {
+.button2 {
+    width: 7em;
+    background-color: #fff;
+    color: #060A1E;
+    border: solid #060A1E 1.5px;
+    text-align: center;
+    font-size: 16px;
+    padding: 6px 8px;
+    margin: auto;
+    border-radius: 3.5px;
+    text-decoration: none;
+}
+
+.button2:hover {
+    background-color: #060A1E;
+    color: #fff;
+    text-decoration: none;
+}
+
+.button3 {
+    width: 6em;
+    background-color: #060A1E;
+    color: #fff;
+    text-align: center;
+    font-size: 12px;
+    padding: 3px 4px;
+    margin: auto;
+    border: #060A1E;
+    border-radius: 3.5px;
+    text-decoration: none;
+}
+
+textarea {
+    border: none;
+    width: 40em;
+    height: 10em;
+    padding: 10px 22px;
+    margin: 10px 5px;
+    background: rgba(196, 196, 196, 0.25);
+    border-radius: 4px;
+}
+
+input[type=text] {
+    border: none;
+    width: 446px;
+    height: 34px;
+    padding: 15px 22px;
+    margin: 10px 5px;
+    background: rgba(196, 196, 196, 0.25);
+    border-radius: 4px;
+}
+
+
+/* SIDEBAR */
+
+/* The navigation menu links */
+
+.sidenav a {
     height: 100%; 
     width: 180px; /* Set the width of the sidebar */
     position: fixed; /* Fixed Sidebar (stay in place on scroll) */
