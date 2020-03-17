@@ -20,15 +20,29 @@ Vue.component('HomeView', {
 Vue.component('Navbar', {
     template: `
     <div>
-    <div class="sidenav">
-      <i class="fa fa-home fa-lg"> <a href="#"> Dashboard </a></i>
-      <i class="fa fa-terminal fa-lg"> <a href="#"> Console </a></i>
-      <i class="fa fa-cog fa-lg"> <a href="#"> Configs </a></i>
-      <i class="fa fa-globe fa-lg"> <a href="#"> Domains </a></i>
-      <i class="fa fa-plug fa-lg"> <a href="#"> Ports </a></i>
-    </div>
+      <div class="sidenav">
+        <i class="fa fa-home fa-lg"> <a href="#"> Dashboard </a></i>
+        <i class="fa fa-terminal fa-lg"> <a href="#"> Console </a></i>
+        <i class="fa fa-cog fa-lg"> <a href="#"> Configs </a></i>
+        <i class="fa fa-globe fa-lg"> <a href="#"> Domains </a></i>
+        <i class="fa fa-plug fa-lg"> <a href="#"> Ports </a></i>
+      </div>
     </div>
   `
+});
+
+Vue.component('Graph', {
+  template: `
+  <div>
+  <div class="sidenav">
+    <i class="fa fa-home fa-lg"> <a href="#"> Dashboard </a></i>
+    <i class="fa fa-terminal fa-lg"> <a href="#"> Console </a></i>
+    <i class="fa fa-cog fa-lg"> <a href="#"> Configs </a></i>
+    <i class="fa fa-globe fa-lg"> <a href="#"> Domains </a></i>
+    <i class="fa fa-plug fa-lg"> <a href="#"> Ports </a></i>
+  </div>
+  </div>
+`
 });
 
 Vue.component('Dashboard', {
