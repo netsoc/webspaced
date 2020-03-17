@@ -1,0 +1,22 @@
+log_level: TRACE
+bind_socket: /run/webspaced/server.sock
+pw_gr_proxy_socket: /run/webspaced/pw_gr_proxy.sock
+lxd:
+  socket: /run/lxd.sock
+  profile: webspace
+  instance_suffix: -ws
+  network: lxdbr0
+webspaces:
+  admin_group: webspace-admin
+  name_template: '{{.User}}'
+  domain_suffix: .ng.localhost
+  config_defaults:
+    startup_delay: 3
+    http_port: 80
+    https_port: 443
+  max_startup_delay: 60
+  run_limit: 32
+  ports:
+    start: 49152
+    end: 65535
+    max: 64

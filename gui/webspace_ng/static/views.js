@@ -17,7 +17,7 @@ Vue.component('HomeView', {
   `
 });
 
-Vue.component('Dashboard', {
+Vue.component('Navbar', {
     template: `
     <div>
     <div class="sidenav">
@@ -31,10 +31,35 @@ Vue.component('Dashboard', {
   `
 });
 
+Vue.component('Dashboard', {
+  template: `
+  <navbar/>
+`
+});
+
+Vue.component('Operating System', {
+    template: `
+    <div class = "container">
+      <div class = "row">
+        <div class = "col"> Ubuntu </div> 
+        <div class = "col"> Arch </div> 
+        <div class = "col"> Redfin </div> 
+      </div> 
+      <br>
+      <div class = "row">
+        <div class = "col"> Fedora </div> 
+        <div class = "col"> Centos </div> 
+        <div class = "col"> Alpine </div> 
+      </div>
+    </div> 
+    <button class = "center"type = "button"> Next </button> 
+    <footer style = "text-align: center"> Brought to you by DU Netsoc</footer>
+  `
+});
 
 Vue.component('Login', {
     template: `
-
+  <template>
     <div class ="center">
       <img class="center" id="login-logo" src="/static/images/logo.png" alt="Netsoc Logo">
       <form @submit.prevent="handleSubmit">
@@ -52,7 +77,6 @@ Vue.component('Login', {
         <p>Made by DU Netsoc</p>
       </div>
     </div>
-  `
 });
 
 

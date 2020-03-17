@@ -10,6 +10,7 @@ services:
       - DEBUG=1
     volumes:
       - .:/usr/local/webspaced
+      - ./config.yaml:/etc/webspaced/config.yaml:ro
       - ./sockets:/run/webspaced
       # If you installed LXD via Snap, use the following instead!
       #- /var/snap/lxd/common/lxd/unix.socket:/run/lxd.sock
