@@ -20,13 +20,13 @@ Vue.component('HomeView', {
 Vue.component('Navbar', {
     template: `
     <div>
-    <div class="sidenav">
-      <i class="fa fa-home fa-lg"> <a href="#"> Dashboard </a></i>
-      <i class="fa fa-terminal fa-lg"> <a href="#"> Console </a></i>
-      <i class="fa fa-cog fa-lg"> <a href="#"> Configs </a></i>
-      <i class="fa fa-globe fa-lg"> <a href="#"> Domains </a></i>
-      <i class="fa fa-plug fa-lg"> <a href="#"> Ports </a></i>
-    </div>
+      <div class="sidenav">
+        <i class="fa fa-home fa-lg"> <a href="#"> Dashboard </a></i>
+        <i class="fa fa-terminal fa-lg"> <a href="#"> Console </a></i>
+        <i class="fa fa-cog fa-lg"> <a href="#"> Configs </a></i>
+        <i class="fa fa-globe fa-lg"> <a href="#"> Domains </a></i>
+        <i class="fa fa-plug fa-lg"> <a href="#"> Ports </a></i>
+      </div>
     </div>
   `
 });
@@ -59,26 +59,26 @@ Vue.component('Operating System', {
 
 Vue.component('Login', {
     template: `
-  <template>
-    <div class ="center">
-      <img class="center" id="login-logo" src="/static/images/logo.png" alt="Netsoc Logo">
-      <form @submit.prevent="handleSubmit">
-          <div class="form-group login-box center">
-              <input type="text" name="username" class="form-control" placeholder="Username" style="border:none; background-color:#fff;"/>
-          </div>
-          <div class="form-group login-box center">
-              <input type="password" name="password" class="form-control" placeholder="Password" style="border:none"/>
-          </div>
-      </form>
-      <div class="bottom-right-corner">
-        <a href= "/welcome" class="button center"> Login </a>
+    <template>
+      <div class ="center">
+        <img class="center" id="login-logo" src="/static/images/logo.png" alt="Netsoc Logo">
+        <form @submit.prevent="handleSubmit">
+            <div class="form-group login-box center">
+                <input type="text" name="username" class="form-control" placeholder="Username" style="border:none; background-color:#fff;"/>
+            </div>
+            <div class="form-group login-box center">
+                <input type="password" name="password" class="form-control" placeholder="Password" style="border:none"/>
+            </div>
+        </form>
+        <div class="bottom-right-corner">
+          <a href= "/welcome" class="button center"> Login </a>
+        </div>
+        <div class="bottom-left-corner">
+          <p>Made by DU Netsoc</p>
+        </div>
       </div>
-      <div class="bottom-left-corner">
-        <p>Made by DU Netsoc</p>
-      </div>
-    </div>
+    `
 });
-
 
 Vue.component('Welcome', {
     template: `
@@ -96,7 +96,6 @@ Vue.component('Welcome', {
     <div>
   `
 });
-
 
 Vue.component('Operating System', {
     template: `
@@ -150,7 +149,6 @@ Vue.component('Operating System', {
   `
 });
 
-
 Vue.component('Create Root PW', {
     template: `
   <div>
@@ -166,8 +164,6 @@ Vue.component('Create Root PW', {
   </div> 
   `
 });
-
-
 
 Vue.component('Congratulations', {
     template: `
