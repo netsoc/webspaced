@@ -1,7 +1,6 @@
 package webspace
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -67,8 +66,7 @@ func convertLXDError(err error) error {
 	}
 }
 
-// TODO: Use regex with (configurable) suffix for webspace naming for bidirectional formatting
-var wsUserRegex = regexp.MustCompile(`^/1\.0/\S+/(\S+)-ws$`)
+var lxdEventUserRegexTpl = `^/1\.0/\S+/(\S+)%v$`
 var lxdEventStateRegex = regexp.MustCompile(`^\S+-(\S+)$`)
 
 // Webspace represents a webspace with all of its configuration and state
@@ -91,10 +89,7 @@ func (w *Webspace) lxdConfig() (string, error) {
 }
 
 func (w *Webspace) simpleExec(cmd string) error {
-	n, err := w.InstanceName()
-	if err != nil {
-		return err
-	}
+	n := w.InstanceName()
 
 	op, err := w.manager.lxd.ExecInstance(n, lxdApi.InstanceExecPost{
 		Command: []string{"sh", "-c", cmd},
@@ -113,22 +108,14 @@ func (w *Webspace) simpleExec(cmd string) error {
 	return nil
 }
 
-// InstanceName uses the template to calculate the name of the instance
-func (w *Webspace) InstanceName() (string, error) {
-	buf := bytes.NewBufferString("")
-	if err := w.manager.config.Webspaces.NameTemplate.Execute(buf, w); err != nil {
-		return "", fmt.Errorf("failed to execute container name template: %w", err)
-	}
-
-	return buf.String(), nil
+// InstanceName uses the suffix to calculate the name of the instance
+func (w *Webspace) InstanceName() string {
+	return w.User + w.manager.config.Webspaces.InstanceSuffix
 }
 
 // Delete deletes the webspace
 func (w *Webspace) Delete() error {
-	n, err := w.InstanceName()
-	if err != nil {
-		return err
-	}
+	n := w.InstanceName()
 
 	state, _, err := w.manager.lxd.GetInstanceState(n)
 	if err != nil {
@@ -155,12 +142,7 @@ func (w *Webspace) Delete() error {
 
 // Boot starts the webspace
 func (w *Webspace) Boot() error {
-	n, err := w.InstanceName()
-	if err != nil {
-		return err
-	}
-
-	if err := w.manager.lxdState(n, "start"); err != nil {
+	if err := w.manager.lxdState(w.InstanceName(), "start"); err != nil {
 		return err
 	}
 	return nil
@@ -168,12 +150,7 @@ func (w *Webspace) Boot() error {
 
 // Reboot restarts the webspace
 func (w *Webspace) Reboot() error {
-	n, err := w.InstanceName()
-	if err != nil {
-		return err
-	}
-
-	if err := w.manager.lxdState(n, "restart"); err != nil {
+	if err := w.manager.lxdState(w.InstanceName(), "restart"); err != nil {
 		return err
 	}
 	return nil
@@ -181,12 +158,7 @@ func (w *Webspace) Reboot() error {
 
 // Shutdown stops the webspace
 func (w *Webspace) Shutdown() error {
-	n, err := w.InstanceName()
-	if err != nil {
-		return err
-	}
-
-	if err := w.manager.lxdState(n, "stop"); err != nil {
+	if err := w.manager.lxdState(w.InstanceName(), "stop"); err != nil {
 		return err
 	}
 	return nil
@@ -194,10 +166,7 @@ func (w *Webspace) Shutdown() error {
 
 // Save updates the stored LXD configuration
 func (w *Webspace) Save() error {
-	n, err := w.InstanceName()
-	if err != nil {
-		return err
-	}
+	n := w.InstanceName()
 
 	i, _, err := w.manager.lxd.GetInstance(n)
 	if err != nil {
@@ -342,10 +311,7 @@ func (w *Webspace) RemovePort(external uint16) error {
 
 // GetIP retrieves the webspace's primary IP address
 func (w *Webspace) GetIP() (string, error) {
-	n, err := w.InstanceName()
-	if err != nil {
-		return "", fmt.Errorf("failed to get instance name: %w", err)
-	}
+	n := w.InstanceName()
 
 	state, _, err := w.manager.lxd.GetInstanceState(n)
 	if err != nil {
@@ -374,9 +340,10 @@ func (w *Webspace) GetIP() (string, error) {
 
 // Manager manages webspace containers
 type Manager struct {
-	config  *config.Config
-	lxd     lxd.InstanceServer
-	traefik *Traefik
+	config         *config.Config
+	lxd            lxd.InstanceServer
+	lxdWsUserRegex *regexp.Regexp
+	traefik        *Traefik
 }
 
 // NewManager returns a new WebspaceManager instance
@@ -389,6 +356,7 @@ func NewManager(cfg *config.Config, l lxd.InstanceServer) (*Manager, error) {
 	m := &Manager{
 		cfg,
 		l,
+		regexp.MustCompile(fmt.Sprintf(lxdEventUserRegexTpl, cfg.Webspaces.InstanceSuffix)),
 		t,
 	}
 
@@ -413,7 +381,7 @@ func (m *Manager) onLxdEvent(e lxdApi.Event) {
 		return
 	}
 
-	match := wsUserRegex.FindStringSubmatch(details.Source)
+	match := m.lxdWsUserRegex.FindStringSubmatch(details.Source)
 	if len(match) == 0 {
 		// Not a webspace instance
 		return
@@ -495,10 +463,7 @@ func (m *Manager) Get(user string) (*Webspace, error) {
 		manager: m,
 		User:    user,
 	}
-	n, err := w.InstanceName()
-	if err != nil {
-		return nil, err
-	}
+	n := w.InstanceName()
 
 	i, _, err := m.lxd.GetInstance(n)
 	if err != nil {
@@ -539,10 +504,7 @@ func (m *Manager) Create(user string, image string, password string, sshKey stri
 		Domains: []string{fmt.Sprintf("%v.%v", user, m.config.Webspaces.Domain)},
 		Ports:   map[uint16]uint16{},
 	}
-	n, err := w.InstanceName()
-	if err != nil {
-		return nil, err
-	}
+	n := w.InstanceName()
 
 	lxdConf, err := w.lxdConfig()
 	if err != nil {

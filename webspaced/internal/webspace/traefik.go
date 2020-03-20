@@ -36,10 +36,7 @@ func (t *Traefik) UpdateConfig(ws *Webspace, running bool) error {
 		return nil
 	}
 
-	n, err := ws.InstanceName()
-	if err != nil {
-		return fmt.Errorf("failed to get instance name: %w", err)
-	}
+	n := ws.InstanceName()
 
 	// TODO: Wait and retry up to a maximum amount
 	time.Sleep(2 * time.Second)

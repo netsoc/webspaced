@@ -61,11 +61,11 @@ type Config struct {
 	Webspaces struct {
 		AdminGroup      string `mapstructure:"admin_group"`
 		Profile         string
-		NameTemplate    template.Template `mapstructure:"name_template"`
-		Domain          string            `mapstructure:"domain"`
-		ConfigDefaults  WebspaceConfig    `mapstructure:"config_defaults"`
-		MaxStartupDelay uint16            `mapstructure:"max_startup_delay"`
-		RunLimit        uint              `mapstructure:"run_limit"`
+		InstanceSuffix  string         `mapstructure:"instance_suffix"`
+		Domain          string         `mapstructure:"domain"`
+		ConfigDefaults  WebspaceConfig `mapstructure:"config_defaults"`
+		MaxStartupDelay uint16         `mapstructure:"max_startup_delay"`
+		RunLimit        uint           `mapstructure:"run_limit"`
 		Ports           struct {
 			Start uint16
 			End   uint16
