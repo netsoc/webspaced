@@ -249,25 +249,25 @@ def init(client, args):
 #@cmd
 #def console(client, _args):
 #    _console(client)
-#
-#@cmd
-#def shutdown(client, _args):
-#    with process('Shutting your container down...'):
-#        client.shutdown()
-#
-#@cmd
-#def reboot(client, _args):
-#    with process('Rebooting your container...'):
-#        client.reboot()
-#
-#@cmd
-#def delete(client, _args):
-#    if not ask('Are you sure?', default='no'):
-#        return
-#
-#    with process('Deleting your container...'):
-#        client.delete()
-#
+
+@cmd
+def shutdown(client, _args):
+    with process('Shutting your container down...'):
+        client.req('DELETE', '/v1/webspace/state')
+
+@cmd
+def reboot(client, _args):
+    with process('Rebooting your container...'):
+        client.req('PUT', '/v1/webspace/state')
+
+@cmd
+def delete(client, _args):
+    if not ask('Are you sure?', default='no'):
+        return
+
+    with process('Deleting your container...'):
+        client.req('DELETE', '/v1/webspace')
+
 #@cmd
 #def config_show(client, args):
 #    config = client.get_config()

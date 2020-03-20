@@ -28,8 +28,8 @@ def main():
     #p_status = subparsers.add_parser('status', help='Show the status of your container')
     #p_status.set_defaults(func=status)
 
-    #p_shutdown = subparsers.add_parser('log', help="Retrieve your container's system log")
-    #p_shutdown.set_defaults(func=log)
+    #p_log = subparsers.add_parser('log', help="Retrieve your container's system log")
+    #p_log.set_defaults(func=log)
 
     #p_exec = subparsers.add_parser('exec', help='Run a command in your container')
     #p_exec.add_argument('command', help='Command to run')
@@ -43,14 +43,14 @@ def main():
     #    (logging in with a configured user)')
     #p_exec.set_defaults(func=login)
 
-    #p_shutdown = subparsers.add_parser('shutdown', help='Shutdown your container')
-    #p_shutdown.set_defaults(func=shutdown)
+    p_shutdown = subparsers.add_parser('shutdown', help='Shutdown your container')
+    p_shutdown.set_defaults(func=shutdown)
 
-    #p_reboot = subparsers.add_parser('reboot', help='Reboot your container')
-    #p_reboot.set_defaults(func=reboot)
+    p_reboot = subparsers.add_parser('reboot', help='Reboot your container')
+    p_reboot.set_defaults(func=reboot)
 
-    #p_delete = subparsers.add_parser('delete', help='Delete your container')
-    #p_delete.set_defaults(func=delete)
+    p_delete = subparsers.add_parser('delete', help='Delete your container')
+    p_delete.set_defaults(func=delete)
 
     #p_config = subparsers.add_parser('config', help="Change your container's options")
     #p_config.set_defaults(func=config_show)
