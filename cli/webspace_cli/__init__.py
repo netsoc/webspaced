@@ -17,11 +17,13 @@ def main():
     p_images = subparsers.add_parser('images', help='List available images')
     p_images.set_defaults(func=images)
 
-    #p_init = subparsers.add_parser('init', help='Create your container',
-    #                               formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    #p_init.add_argument('image',
-    #                    help='Image alias / fingerprint to create your container from')
-    #p_init.set_defaults(func=init)
+    p_init = subparsers.add_parser('init', help='Create your container',
+                                   formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    p_init.add_argument('--no-password', help='Disable root password', action='store_true')
+    p_init.add_argument('-k', '--ssh-key', help='SSH public key to install in webspace (creates port forward)')
+    p_init.add_argument('image',
+                        help='Image alias / fingerprint to create your container from')
+    p_init.set_defaults(func=init)
 
     #p_status = subparsers.add_parser('status', help='Show the status of your container')
     #p_status.set_defaults(func=status)

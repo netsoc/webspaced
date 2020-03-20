@@ -8,6 +8,7 @@ import socket
 import select
 import shutil
 import urllib
+import getpass
 
 import requests
 import requests_unixsocket
@@ -127,15 +128,26 @@ def images(client, _args):
             print('   Description: {}'.format(image['properties']['description']))
         print('   Size: {}'.format(format_size(image['size'], binary=True)))
 
-#@cmd
-#def init(client, args):
-#    with process('Creating your container...', done=' success!'):
-#        image = find_image(client, args.image)
-#        if image is None:
-#            raise WebspaceError('"{}" is not a valid image alias / fingerprint'.format(args.image))
-#
-#        client.init(image['fingerprint'])
-#
+@cmd
+def init(client, args):
+    image = find_image(client, args.image)
+    if image is None:
+        raise WebspaceError(f'"{args.image}" is not a valid image alias / fingerprint')
+    body = {
+        'image': image['fingerprint']
+    }
+
+    if not args.no_password:
+        body['password'] = getpass.getpass('New root password: ')
+        if getpass.getpass('Confirm: ') != body['password']:
+            raise WebspaceError("Passwords don't match!")
+
+    if 'ssh_key' in args:
+        body['sshKey'] = args.ssh_key
+
+    with process('Creating your container...', done=' success!'):
+        client.req('POST', '/v1/webspace', body)
+
 #@cmd
 #def status(client, _args):
 #    info = client.status()
