@@ -18,7 +18,7 @@ services:
       args:
         - TRAEFIK_VERSION=2.2
     environment:
-      - REDIS=127.0.0.1:6379
+      - REDIS_HOST=127.0.0.1
     command:
       - --entryPoints.http.address=:80
       - --entryPoints.https.address=:443

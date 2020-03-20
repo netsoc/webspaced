@@ -1,10 +1,12 @@
 #!/bin/sh
 set -e
 
-# TODO: is this necessary? traefik retries but it doesn't seem to pickup on changes then :(
-until redis-cli ping; do
+REDIS_HOST=${REDIS_HOST:-127.0.0.1}
+REDIS_PORT=${REDIS_PORT:-6379}
+
+until redis-cli -h "$REDIS_HOST" -p "$REDIS_PORT" ping; do
     sleep 0.1
 done
-#redis-cli set traefik yes
+redis-cli set traefik yes
 
-exec traefik "--providers.redis.endpoints=$REDIS" "$@"
+exec traefik "--providers.redis.endpoints=$REDIS_HOST:$REDIS_PORT" "$@"
