@@ -29,4 +29,5 @@ require (
 	gopkg.in/macaroon-bakery.v2 v2.1.0 // indirect
 	gopkg.in/macaroon.v2 v2.1.0 // indirect
 	gopkg.in/robfig/cron.v2 v2.0.0-20150107220207-be2e0b0deed5 // indirect
+	github.com/go-redis/redis/v7 v7.2.0
 )
