@@ -402,7 +402,7 @@ func (m *Manager) onLxdEvent(e lxdApi.Event) {
 
 	log.WithFields(log.Fields{
 		"user":  user,
-		"state": state,
+		"state": state.Status,
 	}).Debug("Updating Traefik config")
 	if err := m.traefik.UpdateConfig(w, state.StatusCode == lxdApi.Running); err != nil {
 		log.WithFields(log.Fields{

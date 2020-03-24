@@ -54,19 +54,14 @@ func (t *Traefik) UpdateConfig(ws *Webspace, running bool) error {
 	rule := strings.Join(rules, " || ")
 
 	// TODO: https (ssl termination _and_ passthrough)
-	if err := t.redis.Set(
-		fmt.Sprintf("traefik/http/services/%v/loadbalancer/servers/0/url", n), backend, 0).Err(); err != nil {
-		return fmt.Errorf("failed to set service config: %w", err)
-	}
-	if err := t.redis.Set(fmt.Sprintf("traefik/http/routers/%v/service", n), n, 0).Err(); err != nil {
-		return fmt.Errorf("failed to set router service: %w", err)
-	}
-	if err := t.redis.Set(fmt.Sprintf("traefik/http/routers/%v/rule", n), rule, 0).Err(); err != nil {
-		return fmt.Errorf("failed to set router rule: %w", err)
-	}
-	if err := t.redis.Set(
-		fmt.Sprintf("traefik/http/routers/%v/entrypoints/0", n), t.config.Traefik.HTTPEntryPoint, 0).Err(); err != nil {
-		return fmt.Errorf("failed to set router entrypoint: %w", err)
+	if _, err = t.redis.TxPipelined(func(pipe redis.Pipeliner) error {
+		pipe.Set(fmt.Sprintf("traefik/http/services/%v/loadbalancer/servers/0/url", n), backend, 0)
+		pipe.Set(fmt.Sprintf("traefik/http/routers/%v/service", n), n, 0)
+		pipe.Set(fmt.Sprintf("traefik/http/routers/%v/rule", n), rule, 0)
+		pipe.Set(fmt.Sprintf("traefik/http/routers/%v/entrypoints/0", n), t.config.Traefik.HTTPEntryPoint, 0)
+		return nil
+	}); err != nil {
+		return fmt.Errorf("failed to set redis values: %w", err)
 	}
 
 	return nil
