@@ -7,8 +7,6 @@
             integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh"
             crossorigin="anonymous">
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.3/Chart.css">
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.1.4/Chart.min.js"></script>
         <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     </head>
   <body>
@@ -29,7 +27,8 @@
     <script src="{% if config['DEBUG'] %}https://cdn.jsdelivr.net/npm/vue/dist/vue.js{% else %}https://cdn.jsdelivr.net/npm/vue@2.6.11{% endif %}">
     </script>
     <script src="https://cdn.jsdelivr.net/npm/vue-router@3.1.5"></script>
-
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xterm/3.14.5/xterm.js"></script>
+    <script src="https://d3js.org/d3.v5.min.js"></script>
     <script src="{{ url_for('static', filename='views.js') }}"></script>
     <script src="{{ url_for('static', filename='main.js') }}"></script>
 </body>
