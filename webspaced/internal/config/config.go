@@ -79,5 +79,7 @@ type Config struct {
 		}
 		HTTPEntryPoint  string `mapstructure:"http_entry_point"`
 		HTTPSEntryPoint string `mapstructure:"https_entry_point"`
+		CertResolver    string `mapstructure:"cert_resolver"`
+		SANs            []string
 	}
 }
