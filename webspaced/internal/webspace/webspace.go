@@ -67,7 +67,7 @@ func convertLXDError(err error) error {
 }
 
 var lxdEventUserRegexTpl = `^/1\.0/\S+/(\S+)%v$`
-var lxdEventStateRegex = regexp.MustCompile(`^\S+-(\S+)$`)
+var lxdEventActionRegex = regexp.MustCompile(`^\S+-(\S+)$`)
 
 // Webspace represents a webspace with all of its configuration and state
 type Webspace struct {
@@ -394,17 +394,39 @@ func (m *Manager) onLxdEvent(e lxdApi.Event) {
 		return
 	}
 
-	state, _, err := m.lxd.GetInstanceState(w.InstanceName())
-	if err != nil {
-		log.WithField("err", err).Error("Failed to retrieve LXD instance state")
+	match = lxdEventActionRegex.FindStringSubmatch(details.Action)
+	if len(match) == 0 {
+		return
+	}
+	action := match[1]
+
+	var running bool
+	switch action {
+	case "started":
+		running = true
+	case "shutdown":
+		running = false
+	case "updated":
+		state, _, err := m.lxd.GetInstanceState(w.InstanceName())
+		if err != nil {
+			log.WithField("err", err).Error("Failed to retrieve LXD instance state")
+			return
+		}
+
+		running = state.StatusCode == lxdApi.Running
+	default:
+		log.WithFields(log.Fields{
+			"user":   user,
+			"action": action,
+		}).Warn("Unknown LXD action")
 		return
 	}
 
 	log.WithFields(log.Fields{
-		"user":  user,
-		"state": state.Status,
+		"user":    user,
+		"running": running,
 	}).Debug("Updating Traefik config")
-	if err := m.traefik.UpdateConfig(w, state.StatusCode == lxdApi.Running); err != nil {
+	if err := m.traefik.UpdateConfig(w, running); err != nil {
 		log.WithFields(log.Fields{
 			"user": user,
 			"err":  err,

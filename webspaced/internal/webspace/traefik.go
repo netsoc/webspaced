@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cenkalti/backoff/v4"
 	"github.com/go-redis/redis/v7"
 	"github.com/netsoc/webspace-ng/webspaced/internal/config"
 )
@@ -30,18 +31,30 @@ func NewTraefik(cfg *config.Config) (*Traefik, error) {
 
 // UpdateConfig generates new Traefik configuration for a webspace
 func (t *Traefik) UpdateConfig(ws *Webspace, running bool) error {
-	// TODO: clear old config
+	n := ws.InstanceName()
+
+	if err := t.redis.Del(
+		fmt.Sprintf("traefik/http/services/%v/loadbalancer/servers/0/url", n),
+		fmt.Sprintf("traefik/http/routers/%v/service", n),
+		fmt.Sprintf("traefik/http/routers/%v/rule", n),
+		fmt.Sprintf("traefik/http/routers/%v/entrypoints/0", n),
+	).Err(); err != nil {
+		return fmt.Errorf("failed to delete redis keys: %w", err)
+	}
 
 	if !running {
 		return nil
 	}
 
-	n := ws.InstanceName()
+	back := backoff.NewExponentialBackOff()
+	back.MaxElapsedTime = 20 * time.Second
 
-	// TODO: Wait and retry up to a maximum amount
-	time.Sleep(2 * time.Second)
-	addr, err := ws.GetIP()
-	if err != nil {
+	var addr string
+	if err := backoff.Retry(func() error {
+		var err error
+		addr, err = ws.GetIP()
+		return err
+	}, back); err != nil {
 		return fmt.Errorf("failed to get instance IP address: %w", err)
 	}
 
@@ -54,7 +67,7 @@ func (t *Traefik) UpdateConfig(ws *Webspace, running bool) error {
 	rule := strings.Join(rules, " || ")
 
 	// TODO: https (ssl termination _and_ passthrough)
-	if _, err = t.redis.TxPipelined(func(pipe redis.Pipeliner) error {
+	if _, err := t.redis.TxPipelined(func(pipe redis.Pipeliner) error {
 		pipe.Set(fmt.Sprintf("traefik/http/services/%v/loadbalancer/servers/0/url", n), backend, 0)
 		pipe.Set(fmt.Sprintf("traefik/http/routers/%v/service", n), n, 0)
 		pipe.Set(fmt.Sprintf("traefik/http/routers/%v/rule", n), rule, 0)

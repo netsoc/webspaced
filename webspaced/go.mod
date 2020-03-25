@@ -3,7 +3,9 @@ module github.com/netsoc/webspace-ng/webspaced
 go 1.14
 
 require (
+	github.com/cenkalti/backoff/v4 v4.0.0
 	github.com/flosch/pongo2 v0.0.0-20190707114632-bbf5a6c351f4 // indirect
+	github.com/go-redis/redis/v7 v7.2.0
 	github.com/golang/protobuf v1.3.3 // indirect
 	github.com/gorilla/handlers v1.4.2
 	github.com/gorilla/mux v1.7.3
@@ -28,6 +30,6 @@ require (
 	gopkg.in/httprequest.v1 v1.2.0 // indirect
 	gopkg.in/macaroon-bakery.v2 v2.1.0 // indirect
 	gopkg.in/macaroon.v2 v2.1.0 // indirect
+	github.com/cenkalti/backoff/v4 v4.0.0
 	gopkg.in/robfig/cron.v2 v2.0.0-20150107220207-be2e0b0deed5 // indirect
-	github.com/go-redis/redis/v7 v7.2.0
 )
