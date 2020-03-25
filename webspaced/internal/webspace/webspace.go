@@ -346,27 +346,43 @@ type Manager struct {
 	traefik        *Traefik
 }
 
-// NewManager returns a new WebspaceManager instance
-func NewManager(cfg *config.Config, l lxd.InstanceServer) (*Manager, error) {
-	t, err := NewTraefik(cfg)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create Traefik manager: %w", err)
-	}
-
-	m := &Manager{
+// NewManager returns a new Manager instance
+func NewManager(cfg *config.Config, l lxd.InstanceServer) *Manager {
+	return &Manager{
 		cfg,
 		l,
 		regexp.MustCompile(fmt.Sprintf(lxdEventUserRegexTpl, cfg.Webspaces.InstanceSuffix)),
-		t,
+		NewTraefik(cfg),
+	}
+}
+
+// Start starts the webspace manager
+func (m *Manager) Start() error {
+	webspaces, err := m.GetAll()
+	if err != nil {
+		return fmt.Errorf("failed to retrieve all webspaces: %w", err)
+	}
+	for _, w := range webspaces {
+		state, _, err := m.lxd.GetInstanceState(w.InstanceName())
+		if err != nil {
+			return fmt.Errorf("failed to retrieve LXD instance state: %w", err)
+		}
+
+		running := state.StatusCode == lxdApi.Running
+		log.WithFields(log.Fields{
+			"user":    w.User,
+			"running": running,
+		}).Debug("Generating initial Traefik config")
+		m.traefik.UpdateConfig(w, running)
 	}
 
-	listener, err := l.GetEvents()
+	listener, err := m.lxd.GetEvents()
 	if err != nil {
-		return nil, err
+		return fmt.Errorf("failed to get LXD event listener: %w", err)
 	}
 	listener.AddHandler([]string{"lifecycle"}, m.onLxdEvent)
 
-	return m, nil
+	return nil
 }
 
 type lxdEventDetails struct {

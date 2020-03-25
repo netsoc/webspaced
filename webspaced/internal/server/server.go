@@ -185,8 +185,9 @@ func (s *Server) Start() error {
 		return fmt.Errorf("LXD returned error looking for network %v: %w", s.Config.LXD.Network, err)
 	}
 
-	if s.Webspaces, err = webspace.NewManager(&s.Config, s.lxd); err != nil {
-		return fmt.Errorf("failed to initialize webspace manager: %v", err)
+	s.Webspaces = webspace.NewManager(&s.Config, s.lxd)
+	if err := s.Webspaces.Start(); err != nil {
+		return fmt.Errorf("failed to start webspace manager: %v", err)
 	}
 
 	listener, err := net.Listen("unix", s.Config.BindSocket)

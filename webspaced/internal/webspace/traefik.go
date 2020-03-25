@@ -18,7 +18,7 @@ type Traefik struct {
 }
 
 // NewTraefik creates a new Traefik instance
-func NewTraefik(cfg *config.Config) (*Traefik, error) {
+func NewTraefik(cfg *config.Config) *Traefik {
 	client := redis.NewClient(&redis.Options{
 		Addr: cfg.Traefik.Redis.Addr,
 		DB:   cfg.Traefik.Redis.DB,
@@ -27,7 +27,7 @@ func NewTraefik(cfg *config.Config) (*Traefik, error) {
 	return &Traefik{
 		cfg,
 		client,
-	}, nil
+	}
 }
 
 // UpdateConfig generates new Traefik configuration for a webspace
