@@ -1,5 +1,35 @@
 version: '3'
 services:
+  redis:
+    image: redis:alpine
+    command:
+      - --save
+      - ''
+      - --appendonly
+      - 'no'
+    ports:
+      - 127.0.0.1:6379:6379
+
+  traefik:
+    image: netsoc/webspace-ng/traefik
+    build:
+      context: .
+      dockerfile: Dockerfile.traefik
+      args:
+        - TRAEFIK_VERSION=2.2
+    environment:
+      - REDIS_HOST=127.0.0.1
+    command:
+      - --providers.file.filename=/static.yaml
+      - --entryPoints.http.address=:80
+      - --entryPoints.https.address=:443
+      - --api.dashboard=true
+      - --log.level=DEBUG
+      - --accesslog=true
+    volumes:
+      - ./traefik-static.yaml:/static.yaml:ro
+    network_mode: host
+
   app:
     image: netsoc/webspace-ng/webspaced:dev
     build:

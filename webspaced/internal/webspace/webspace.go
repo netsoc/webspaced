@@ -1,12 +1,12 @@
 package webspace
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"math/rand"
 	"net"
+	"regexp"
 
 	lxd "github.com/lxc/lxd/client"
 	lxdApi "github.com/lxc/lxd/shared/api"
@@ -43,6 +43,12 @@ var ErrTooManyPorts = errors.New("port forward limit reached")
 // ErrBadPort indicates that the provided port is invalid
 var ErrBadPort = errors.New("invalid port")
 
+// ErrInterface indicates the default interface is missing
+var ErrInterface = errors.New("default network interface not present")
+
+// ErrAddress indicates the interface didn't have an IPv4 address
+var ErrAddress = errors.New("ipv4 address not found")
+
 // convertLXDError is a HACK: LXD doesn't seem to return a code we can use to determine the error...
 func convertLXDError(err error) error {
 	switch err.Error() {
@@ -59,6 +65,9 @@ func convertLXDError(err error) error {
 		return err
 	}
 }
+
+var lxdEventUserRegexTpl = `^/1\.0/\S+/(\S+)%v$`
+var lxdEventActionRegex = regexp.MustCompile(`^\S+-(\S+)$`)
 
 // Webspace represents a webspace with all of its configuration and state
 type Webspace struct {
@@ -80,10 +89,7 @@ func (w *Webspace) lxdConfig() (string, error) {
 }
 
 func (w *Webspace) simpleExec(cmd string) error {
-	n, err := w.InstanceName()
-	if err != nil {
-		return err
-	}
+	n := w.InstanceName()
 
 	op, err := w.manager.lxd.ExecInstance(n, lxdApi.InstanceExecPost{
 		Command: []string{"sh", "-c", cmd},
@@ -102,22 +108,14 @@ func (w *Webspace) simpleExec(cmd string) error {
 	return nil
 }
 
-// InstanceName uses the template to calculate the name of the instance
-func (w *Webspace) InstanceName() (string, error) {
-	buf := bytes.NewBufferString("")
-	if err := w.manager.config.Webspaces.NameTemplate.Execute(buf, w); err != nil {
-		return "", fmt.Errorf("failed to execute container name template: %w", err)
-	}
-
-	return buf.String(), nil
+// InstanceName uses the suffix to calculate the name of the instance
+func (w *Webspace) InstanceName() string {
+	return w.User + w.manager.config.Webspaces.InstanceSuffix
 }
 
 // Delete deletes the webspace
 func (w *Webspace) Delete() error {
-	n, err := w.InstanceName()
-	if err != nil {
-		return err
-	}
+	n := w.InstanceName()
 
 	state, _, err := w.manager.lxd.GetInstanceState(n)
 	if err != nil {
@@ -144,12 +142,7 @@ func (w *Webspace) Delete() error {
 
 // Boot starts the webspace
 func (w *Webspace) Boot() error {
-	n, err := w.InstanceName()
-	if err != nil {
-		return err
-	}
-
-	if err := w.manager.lxdState(n, "start"); err != nil {
+	if err := w.manager.lxdState(w.InstanceName(), "start"); err != nil {
 		return err
 	}
 	return nil
@@ -157,12 +150,7 @@ func (w *Webspace) Boot() error {
 
 // Reboot restarts the webspace
 func (w *Webspace) Reboot() error {
-	n, err := w.InstanceName()
-	if err != nil {
-		return err
-	}
-
-	if err := w.manager.lxdState(n, "restart"); err != nil {
+	if err := w.manager.lxdState(w.InstanceName(), "restart"); err != nil {
 		return err
 	}
 	return nil
@@ -170,12 +158,7 @@ func (w *Webspace) Reboot() error {
 
 // Shutdown stops the webspace
 func (w *Webspace) Shutdown() error {
-	n, err := w.InstanceName()
-	if err != nil {
-		return err
-	}
-
-	if err := w.manager.lxdState(n, "stop"); err != nil {
+	if err := w.manager.lxdState(w.InstanceName(), "stop"); err != nil {
 		return err
 	}
 	return nil
@@ -183,10 +166,7 @@ func (w *Webspace) Shutdown() error {
 
 // Save updates the stored LXD configuration
 func (w *Webspace) Save() error {
-	n, err := w.InstanceName()
-	if err != nil {
-		return err
-	}
+	n := w.InstanceName()
 
 	i, _, err := w.manager.lxd.GetInstance(n)
 	if err != nil {
@@ -329,35 +309,145 @@ func (w *Webspace) RemovePort(external uint16) error {
 	return w.Save()
 }
 
-// Manager manages webspace containers
-type Manager struct {
-	config *config.Config
-	lxd    lxd.InstanceServer
-}
+// GetIP retrieves the webspace's primary IP address
+func (w *Webspace) GetIP() (string, error) {
+	n := w.InstanceName()
 
-// NewManager returns a new WebspaceManager instance
-func NewManager(cfg *config.Config, l lxd.InstanceServer) (*Manager, error) {
-	m := &Manager{
-		cfg,
-		l,
+	state, _, err := w.manager.lxd.GetInstanceState(n)
+	if err != nil {
+		return "", fmt.Errorf("failed to get LXD instance state: %w", err)
 	}
 
-	listener, err := l.GetEvents()
+	iface, ok := state.Network["eth0"]
+	if !ok {
+		return "", ErrInterface
+	}
+
+	var addr string
+	for _, info := range iface.Addresses {
+		if info.Family != "inet" || info.Scope != "global" {
+			continue
+		}
+
+		addr = info.Address
+	}
+	if addr == "" {
+		return "", ErrAddress
+	}
+
+	return addr, nil
+}
+
+// Manager manages webspace containers
+type Manager struct {
+	config         *config.Config
+	lxd            lxd.InstanceServer
+	lxdWsUserRegex *regexp.Regexp
+	traefik        *Traefik
+}
+
+// NewManager returns a new Manager instance
+func NewManager(cfg *config.Config, l lxd.InstanceServer) *Manager {
+	return &Manager{
+		cfg,
+		l,
+		regexp.MustCompile(fmt.Sprintf(lxdEventUserRegexTpl, cfg.Webspaces.InstanceSuffix)),
+		NewTraefik(cfg),
+	}
+}
+
+// Start starts the webspace manager
+func (m *Manager) Start() error {
+	webspaces, err := m.GetAll()
 	if err != nil {
-		return nil, err
+		return fmt.Errorf("failed to retrieve all webspaces: %w", err)
+	}
+	for _, w := range webspaces {
+		state, _, err := m.lxd.GetInstanceState(w.InstanceName())
+		if err != nil {
+			return fmt.Errorf("failed to retrieve LXD instance state: %w", err)
+		}
+
+		running := state.StatusCode == lxdApi.Running
+		log.WithFields(log.Fields{
+			"user":    w.User,
+			"running": running,
+		}).Debug("Generating initial Traefik config")
+		m.traefik.UpdateConfig(w, running)
+	}
+
+	listener, err := m.lxd.GetEvents()
+	if err != nil {
+		return fmt.Errorf("failed to get LXD event listener: %w", err)
 	}
 	listener.AddHandler([]string{"lifecycle"}, m.onLxdEvent)
 
-	return m, nil
+	return nil
+}
+
+type lxdEventDetails struct {
+	Action string
+	Source string
 }
 
 func (m *Manager) onLxdEvent(e lxdApi.Event) {
-	var details map[string]interface{}
-	json.Unmarshal(e.Metadata, &details)
+	var details lxdEventDetails
+	if err := json.Unmarshal(e.Metadata, &details); err != nil {
+		// Event doesn't have the fields we want, ignore
+		return
+	}
+
+	match := m.lxdWsUserRegex.FindStringSubmatch(details.Source)
+	if len(match) == 0 {
+		// Not a webspace instance
+		return
+	}
+
+	user := match[1]
+	w, err := m.Get(user)
+	if err != nil {
+		log.WithField("err", err).Error("Failed to retrieve webspace")
+		return
+	}
+
+	match = lxdEventActionRegex.FindStringSubmatch(details.Action)
+	if len(match) == 0 {
+		return
+	}
+	action := match[1]
+
+	var running bool
+	switch action {
+	case "started":
+		running = true
+	case "shutdown":
+		running = false
+	case "updated":
+		state, _, err := m.lxd.GetInstanceState(w.InstanceName())
+		if err != nil {
+			log.WithField("err", err).Error("Failed to retrieve LXD instance state")
+			return
+		}
+
+		running = state.StatusCode == lxdApi.Running
+	default:
+		log.WithFields(log.Fields{
+			"user":   user,
+			"action": action,
+		}).Warn("Unknown LXD action")
+		return
+	}
+
 	log.WithFields(log.Fields{
-		"type":    e.Type,
-		"details": details,
-	}).Debug("lxd event")
+		"user":    user,
+		"running": running,
+	}).Debug("Updating Traefik config")
+	if err := m.traefik.UpdateConfig(w, running); err != nil {
+		log.WithFields(log.Fields{
+			"user": user,
+			"err":  err,
+		}).Error("Failed to update Traefik config")
+	}
 }
 
 func (m *Manager) instanceToWebspace(i *lxdApi.Instance) (*Webspace, error) {
@@ -397,10 +487,7 @@ func (m *Manager) Get(user string) (*Webspace, error) {
 		manager: m,
 		User:    user,
 	}
-	n, err := w.InstanceName()
-	if err != nil {
-		return nil, err
-	}
+	n := w.InstanceName()
 
 	i, _, err := m.lxd.GetInstance(n)
 	if err != nil {
@@ -441,10 +528,7 @@ func (m *Manager) Create(user string, image string, password string, sshKey stri
 		Domains: []string{fmt.Sprintf("%v.%v", user, m.config.Webspaces.Domain)},
 		Ports:   map[uint16]uint16{},
 	}
-	n, err := w.InstanceName()
-	if err != nil {
-		return nil, err
-	}
+	n := w.InstanceName()
 
 	lxdConf, err := w.lxdConfig()
 	if err != nil {
