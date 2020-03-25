@@ -1,0 +1,7 @@
+http:
+  routers:
+    api:
+      service: api@internal
+      rule: 'Host(`traefik.localhost`)'
+      entrypoints:
+        - http

@@ -20,11 +20,14 @@ services:
     environment:
       - REDIS_HOST=127.0.0.1
     command:
+      - --providers.file.filename=/static.yaml
       - --entryPoints.http.address=:80
       - --entryPoints.https.address=:443
       - --api.dashboard=true
       - --log.level=DEBUG
       - --accesslog=true
+    volumes:
+      - ./traefik-static.yaml:/static.yaml:ro
     network_mode: host
 
   app:
