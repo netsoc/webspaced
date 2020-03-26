@@ -28,10 +28,8 @@ func NewTraefik(cfg *config.Config) *Traefik {
 	}
 }
 
-// UpdateConfig generates new Traefik configuration for a webspace
-func (t *Traefik) UpdateConfig(ws *Webspace, addr string) error {
-	n := ws.InstanceName()
-
+// ClearConfig cleans out any configuration for an instance
+func (t *Traefik) ClearConfig(n string) error {
 	if _, err := t.redis.TxPipelined(func(pipe redis.Pipeliner) error {
 		pipe.Del(
 			fmt.Sprintf("traefik/http/services/%v/loadbalancer/servers/0/url", n),
@@ -74,6 +72,14 @@ func (t *Traefik) UpdateConfig(ws *Webspace, addr string) error {
 		return fmt.Errorf("failed to delete redis keys: %w", err)
 	}
 
+	return nil
+}
+
+// GenerateConfig generates new Traefik configuration for a webspace
+func (t *Traefik) GenerateConfig(ws *Webspace, addr string) error {
+	n := ws.InstanceName()
+
+	// TODO: generate config with poking of backend to start webspace
 	if addr == "" {
 		return nil
 	}

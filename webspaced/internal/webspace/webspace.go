@@ -112,7 +112,7 @@ func (w *Webspace) simpleExec(cmd string) error {
 
 // InstanceName uses the suffix to calculate the name of the instance
 func (w *Webspace) InstanceName() string {
-	return w.User + w.manager.config.Webspaces.InstanceSuffix
+	return w.manager.lxdInstanceName(w.User)
 }
 
 // Delete deletes the webspace
@@ -425,11 +425,11 @@ func (m *Manager) Start() error {
 			}
 		}
 
-		if err := m.traefik.UpdateConfig(w, addr); err != nil {
+		if err := m.traefik.GenerateConfig(w, addr); err != nil {
 			return fmt.Errorf("failed to update traefik config: %w", err)
 		}
 
-		if err := m.ports.Update(webspaces, w, addr); err != nil {
+		if err := m.ports.AddAll(w, addr); err != nil {
 			return fmt.Errorf("failed to set up port forwards: %w", err)
 		}
 	}
@@ -449,6 +449,10 @@ func (m *Manager) Shutdown() {
 	m.ports.Shutdown()
 }
 
+func (m *Manager) lxdInstanceName(user string) string {
+	return user + m.config.Webspaces.InstanceSuffix
+}
+
 type lxdEventDetails struct {
 	Action string
 	Source string
@@ -466,11 +470,23 @@ func (m *Manager) onLxdEvent(e lxdApi.Event) {
 		// Not a webspace instance
 		return
 	}
-
 	user := match[1]
-	w, err := m.Get(user)
+
+	if err := m.traefik.ClearConfig(m.lxdInstanceName(user)); err != nil {
+		log.WithFields(log.Fields{
+			"user": user,
+			"err":  err,
+		}).Error("Failed to clear Traefik config")
+		return
+	}
+
+	all, err := m.GetAll()
 	if err != nil {
-		log.WithField("err", err).Error("Failed to retrieve webspace")
+		log.WithField("err", err).Error("Failed to get all webspaces")
+		return
+	}
+	if err := m.ports.Trim(all); err != nil {
+		log.WithField("err", err).Error("Failed to trim port forwards")
 		return
 	}
 
@@ -480,11 +496,24 @@ func (m *Manager) onLxdEvent(e lxdApi.Event) {
 	}
 	action := match[1]
 
+	if action == "deleted" {
+		return
+	}
+
+	w, err := m.Get(user)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"user": user,
+			"err":  err,
+		}).Error("Failed to retrieve webspace")
+		return
+	}
+
 	var running bool
 	switch action {
 	case "started":
 		running = true
-	case "shutdown":
+	case "shutdown", "created":
 		running = false
 	case "updated":
 		state, _, err := m.lxd.GetInstanceState(w.InstanceName())
@@ -515,7 +544,8 @@ func (m *Manager) onLxdEvent(e lxdApi.Event) {
 		"user":    user,
 		"running": running,
 	}).Debug("Updating Traefik / port forward config")
-	if err := m.traefik.UpdateConfig(w, addr); err != nil {
+
+	if err := m.traefik.GenerateConfig(w, addr); err != nil {
 		log.WithFields(log.Fields{
 			"user": user,
 			"err":  err,
@@ -523,13 +553,7 @@ func (m *Manager) onLxdEvent(e lxdApi.Event) {
 		return
 	}
 
-	all, err := m.GetAll()
-	if err != nil {
-		log.WithField("err", err).Error("Failed to get all webspaces")
-		return
-	}
-
-	if err := m.ports.Update(all, w, addr); err != nil {
+	if err := m.ports.AddAll(w, addr); err != nil {
 		log.WithFields(log.Fields{
 			"user": user,
 			"err":  err,

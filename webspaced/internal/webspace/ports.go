@@ -149,8 +149,8 @@ func (p *PortsManager) Remove(e uint16) error {
 	return nil
 }
 
-// Update re-configures all port forwards by looking at webspace config
-func (p *PortsManager) Update(all []*Webspace, w *Webspace, addr string) error {
+// Trim removes port forwards that have been deleted
+func (p *PortsManager) Trim(all []*Webspace) error {
 	allPorts := make(map[uint16]struct{})
 	for _, w := range all {
 		for e := range w.Ports {
@@ -162,14 +162,16 @@ func (p *PortsManager) Update(all []*Webspace, w *Webspace, addr string) error {
 		}
 	}
 
-	// Detect deleted ports
 	for e := range p.forwards {
 		if _, ok := allPorts[e]; !ok {
 			p.Remove(e)
 		}
 	}
+	return nil
+}
 
-	// Add / update port forwards
+// AddAll adds / updates port forwards for a given webspace
+func (p *PortsManager) AddAll(w *Webspace, addr string) error {
 	for e := range w.Ports {
 		if _, ok := p.forwards[e]; ok {
 			p.Remove(e)
