@@ -372,8 +372,7 @@ func (w *Webspace) EnsureStarted() error {
 		return fmt.Errorf("failed to start webspace: %w", err)
 	}
 
-	// TODO: do startup delay using Duration
-	//time.Sleep(w.Config.StartupDelay)
+	time.Sleep(time.Duration(w.Config.StartupDelay * float64(time.Second)))
 	return nil
 }
 
