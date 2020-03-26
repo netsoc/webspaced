@@ -62,6 +62,9 @@ func (t *Traefik) ClearConfig(n string) error {
 			fmt.Sprintf("traefik/tcp/routers/%v-https/tls/domains/0/main", n),
 			fmt.Sprintf("traefik/tcp/routers/%v-https/tls/certresolver", n),
 			fmt.Sprintf("traefik/tcp/routers/%v-https/tls/passthrough", n),
+
+			fmt.Sprintf("traefik/tcp/routers/%v-https/webspaceboot/socket", n),
+			fmt.Sprintf("traefik/tcp/routers/%v-https/webspaceboot/user", n),
 		)
 
 		if len(t.config.Traefik.SANs) > 0 {
@@ -120,6 +123,7 @@ func (t *Traefik) GenerateConfig(ws *Webspace, addr string) error {
 				log.WithField("user", ws.User).Warn("Using SSL termination with custom domains - these will be ignored")
 			}
 
+			pipe.Set(fmt.Sprintf("traefik/http/routers/%v-https/service", n), n, 0)
 			pipe.Set(
 				fmt.Sprintf("traefik/http/routers/%v-https/rule", n),
 				fmt.Sprintf("Host(`%v.%v`)", ws.User, t.config.Webspaces.Domain),
@@ -133,11 +137,17 @@ func (t *Traefik) GenerateConfig(ws *Webspace, addr string) error {
 			// SNI passthrough
 			rt = "tcp"
 
-			pipe.Set(
-				fmt.Sprintf("traefik/tcp/services/%v/loadbalancer/servers/0/address", n),
-				fmt.Sprintf("%v:%v", addr, ws.Config.HTTPSPort),
-				0,
-			)
+			if addr != "" {
+				pipe.Set(
+					fmt.Sprintf("traefik/tcp/services/%v/loadbalancer/servers/0/address", n),
+					fmt.Sprintf("%v:%v", addr, ws.Config.HTTPSPort),
+					0,
+				)
+				pipe.Set(fmt.Sprintf("traefik/tcp/routers/%v-https/service", n), n, 0)
+			} else {
+				pipe.Set(fmt.Sprintf("traefik/tcp/routers/%v-https/webspaceboot/socket", n), t.config.BindSocket, 0)
+				pipe.Set(fmt.Sprintf("traefik/tcp/routers/%v-https/webspaceboot/user", n), ws.User, 0)
+			}
 
 			sniRules := make([]string, len(ws.Domains))
 			for i, d := range ws.Domains {
@@ -150,7 +160,6 @@ func (t *Traefik) GenerateConfig(ws *Webspace, addr string) error {
 			pipe.Set(fmt.Sprintf("traefik/tcp/routers/%v-https/tls/passthrough", n), "true", 0)
 		}
 
-		pipe.Set(fmt.Sprintf("traefik/%v/routers/%v-https/service", rt, n), n, 0)
 		pipe.Set(
 			fmt.Sprintf("traefik/%v/routers/%v-https/entrypoints/0", rt, n),
 			t.config.Traefik.HTTPSEntryPoint,
