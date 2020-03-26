@@ -180,13 +180,9 @@ func (p *PortsManager) AddAll(w *Webspace, addr string) error {
 				"iPort": i,
 			}).Debug("Waiting for webspace to start to forward port")
 
-			if err := w.EnsureStarted(); err != nil {
-				return fmt.Errorf("failed to ensure webspace was started: %w", err)
-			}
-
-			addr, err := w.AwaitIP()
+			addr, err := w.EnsureStarted()
 			if err != nil {
-				return fmt.Errorf("failed to await webspace IP: %w", err)
+				return fmt.Errorf("failed to ensure webspace was started: %w", err)
 			}
 
 			backendAddr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("%v:%v", addr, i))

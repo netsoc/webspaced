@@ -33,6 +33,11 @@ func (t *Traefik) ClearConfig(n string) error {
 	if _, err := t.redis.TxPipelined(func(pipe redis.Pipeliner) error {
 		pipe.Del(
 			fmt.Sprintf("traefik/http/services/%v/loadbalancer/servers/0/url", n),
+			fmt.Sprintf("traefik/http/services/%v/loadbalancer/passhostheader", n),
+
+			fmt.Sprintf("traefik/http/middlewares/%v-boot/webspaceBoot/socket", n),
+			fmt.Sprintf("traefik/http/middlewares/%v-boot/webspaceBoot/user", n),
+			fmt.Sprintf("traefik/http/routers/%v/middlewares/0", n),
 
 			fmt.Sprintf("traefik/http/routers/%v/service", n),
 			fmt.Sprintf("traefik/http/routers/%v/rule", n),
@@ -41,6 +46,7 @@ func (t *Traefik) ClearConfig(n string) error {
 			fmt.Sprintf("traefik/http/routers/%v-https/service", n),
 			fmt.Sprintf("traefik/http/routers/%v-https/rule", n),
 			fmt.Sprintf("traefik/http/routers/%v-https/entrypoints/0", n),
+			fmt.Sprintf("traefik/http/routers/%v-https/middlewares/0", n),
 
 			fmt.Sprintf("traefik/http/routers/%v-https/tls", n),
 			fmt.Sprintf("traefik/http/routers/%v-https/tls/domains/0/main", n),
@@ -79,20 +85,27 @@ func (t *Traefik) ClearConfig(n string) error {
 func (t *Traefik) GenerateConfig(ws *Webspace, addr string) error {
 	n := ws.InstanceName()
 
-	// TODO: generate config with poking of backend to start webspace
-	if addr == "" {
-		return nil
-	}
-
 	rules := make([]string, len(ws.Domains))
 	for i, d := range ws.Domains {
 		rules[i] = fmt.Sprintf("Host(`%v`)", d)
 	}
 	rule := strings.Join(rules, " || ")
 
-	httpBackend := fmt.Sprintf("http://%v:%v", addr, ws.Config.HTTPPort)
 	if _, err := t.redis.TxPipelined(func(pipe redis.Pipeliner) error {
-		pipe.Set(fmt.Sprintf("traefik/http/services/%v/loadbalancer/servers/0/url", n), httpBackend, 0)
+		if addr != "" {
+			pipe.Set(
+				fmt.Sprintf("traefik/http/services/%v/loadbalancer/servers/0/url", n),
+				fmt.Sprintf("http://%v:%v", addr, ws.Config.HTTPPort),
+				0,
+			)
+		} else {
+			// Needed so that load balancer mode is engaged
+			pipe.Set(fmt.Sprintf("traefik/http/services/%v/loadbalancer/passhostheader", n), true, 0)
+
+			pipe.Set(fmt.Sprintf("traefik/http/middlewares/%v-boot/webspaceBoot/socket", n), t.config.BindSocket, 0)
+			pipe.Set(fmt.Sprintf("traefik/http/middlewares/%v-boot/webspaceBoot/user", n), ws.User, 0)
+			pipe.Set(fmt.Sprintf("traefik/http/routers/%v/middlewares/0", n), n+"-boot", 0)
+		}
 
 		pipe.Set(fmt.Sprintf("traefik/http/routers/%v/service", n), n, 0)
 		pipe.Set(fmt.Sprintf("traefik/http/routers/%v/rule", n), rule, 0)
@@ -112,6 +125,10 @@ func (t *Traefik) GenerateConfig(ws *Webspace, addr string) error {
 				fmt.Sprintf("Host(`%v.%v`)", ws.User, t.config.Webspaces.Domain),
 				0,
 			)
+
+			if addr == "" {
+				pipe.Set(fmt.Sprintf("traefik/http/routers/%v-https/middlewares/0", n), n+"-boot", 0)
+			}
 		} else {
 			// SNI passthrough
 			rt = "tcp"

@@ -1,5 +1,8 @@
-ARG TRAEFIK_VERSION=2.2
-FROM traefik:$TRAEFIK_VERSION
+FROM netsoc/webspace-ng/traefik AS builder
+
+
+FROM alpine:3.11
+COPY --from=builder /traefik /usr/local/bin/traefik
 
 RUN apk --no-cache add redis
 
