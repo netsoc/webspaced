@@ -39,3 +39,4 @@ services:
       # If you installed LXD via Snap, use the following instead!
       #- /var/snap/lxd/common/lxd/unix.socket:/run/lxd.sock
       - /var/lib/lxd/unix.socket:/run/lxd.sock
+    network_mode: host

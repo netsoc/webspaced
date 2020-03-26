@@ -29,7 +29,7 @@ func init() {
 	viper.SetDefault("webspaces.ports.start", 49152)
 	viper.SetDefault("webspaces.ports.end", 65535)
 	viper.SetDefault("webspaces.ports.max", 64)
-	viper.SetDefault("traefik.redis.addr", "redis:6379")
+	viper.SetDefault("traefik.redis.addr", "127.0.0.1:6379")
 	viper.SetDefault("traefik.redis.db", 0)
 	viper.SetDefault("traefik.http_entry_point", "http")
 	viper.SetDefault("traefik.https_entry_point", "https")

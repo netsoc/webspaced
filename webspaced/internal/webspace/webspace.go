@@ -7,7 +7,9 @@ import (
 	"math/rand"
 	"net"
 	"regexp"
+	"time"
 
+	"github.com/cenkalti/backoff/v4"
 	lxd "github.com/lxc/lxd/client"
 	lxdApi "github.com/lxc/lxd/shared/api"
 	"github.com/netsoc/webspace-ng/webspaced/internal/config"
@@ -110,7 +112,7 @@ func (w *Webspace) simpleExec(cmd string) error {
 
 // InstanceName uses the suffix to calculate the name of the instance
 func (w *Webspace) InstanceName() string {
-	return w.User + w.manager.config.Webspaces.InstanceSuffix
+	return w.manager.lxdInstanceName(w.User)
 }
 
 // Delete deletes the webspace
@@ -338,12 +340,50 @@ func (w *Webspace) GetIP() (string, error) {
 	return addr, nil
 }
 
+// AwaitIP attempts to retrieve the webspace's IP with exponential backoff
+func (w *Webspace) AwaitIP() (string, error) {
+	back := backoff.NewExponentialBackOff()
+	back.MaxElapsedTime = 20 * time.Second
+
+	var addr string
+	if err := backoff.Retry(func() error {
+		var err error
+		addr, err = w.GetIP()
+		return err
+	}, back); err != nil {
+		return "", err
+	}
+
+	return addr, nil
+}
+
+// EnsureStarted starts a webspace if it isn't running (delaying by the startup delay)
+func (w *Webspace) EnsureStarted() error {
+	state, _, err := w.manager.lxd.GetInstanceState(w.InstanceName())
+	if err != nil {
+		return fmt.Errorf("failed to get LXD instance state: %w", err)
+	}
+
+	if state.StatusCode == lxdApi.Running {
+		return nil
+	}
+
+	if err := w.Boot(); err != nil {
+		return fmt.Errorf("failed to start webspace: %w", err)
+	}
+
+	time.Sleep(time.Duration(w.Config.StartupDelay * float64(time.Second)))
+	return nil
+}
+
 // Manager manages webspace containers
 type Manager struct {
 	config         *config.Config
 	lxd            lxd.InstanceServer
 	lxdWsUserRegex *regexp.Regexp
+	lxdListener    *lxd.EventListener
 	traefik        *Traefik
+	ports          *PortsManager
 }
 
 // NewManager returns a new Manager instance
@@ -352,7 +392,9 @@ func NewManager(cfg *config.Config, l lxd.InstanceServer) *Manager {
 		cfg,
 		l,
 		regexp.MustCompile(fmt.Sprintf(lxdEventUserRegexTpl, cfg.Webspaces.InstanceSuffix)),
+		nil,
 		NewTraefik(cfg),
+		NewPortsManager(),
 	}
 }
 
@@ -372,17 +414,42 @@ func (m *Manager) Start() error {
 		log.WithFields(log.Fields{
 			"user":    w.User,
 			"running": running,
-		}).Debug("Generating initial Traefik config")
-		m.traefik.UpdateConfig(w, running)
+		}).Debug("Generating initial Traefik / port forwarding config")
+
+		var addr string
+		if running {
+			addr, err = w.AwaitIP()
+			if err != nil {
+				return fmt.Errorf("failed to get instance IP address: %w", err)
+			}
+		}
+
+		if err := m.traefik.GenerateConfig(w, addr); err != nil {
+			return fmt.Errorf("failed to update traefik config: %w", err)
+		}
+
+		if err := m.ports.AddAll(w, addr); err != nil {
+			return fmt.Errorf("failed to set up port forwards: %w", err)
+		}
 	}
 
-	listener, err := m.lxd.GetEvents()
+	m.lxdListener, err = m.lxd.GetEvents()
 	if err != nil {
 		return fmt.Errorf("failed to get LXD event listener: %w", err)
 	}
-	listener.AddHandler([]string{"lifecycle"}, m.onLxdEvent)
+	m.lxdListener.AddHandler([]string{"lifecycle"}, m.onLxdEvent)
 
 	return nil
+}
+
+// Shutdown stops the webspace manager
+func (m *Manager) Shutdown() {
+	m.lxdListener.Disconnect()
+	m.ports.Shutdown()
+}
+
+func (m *Manager) lxdInstanceName(user string) string {
+	return user + m.config.Webspaces.InstanceSuffix
 }
 
 type lxdEventDetails struct {
@@ -402,11 +469,23 @@ func (m *Manager) onLxdEvent(e lxdApi.Event) {
 		// Not a webspace instance
 		return
 	}
-
 	user := match[1]
-	w, err := m.Get(user)
+
+	if err := m.traefik.ClearConfig(m.lxdInstanceName(user)); err != nil {
+		log.WithFields(log.Fields{
+			"user": user,
+			"err":  err,
+		}).Error("Failed to clear Traefik config")
+		return
+	}
+
+	all, err := m.GetAll()
 	if err != nil {
-		log.WithField("err", err).Error("Failed to retrieve webspace")
+		log.WithField("err", err).Error("Failed to get all webspaces")
+		return
+	}
+	if err := m.ports.Trim(all); err != nil {
+		log.WithField("err", err).Error("Failed to trim port forwards")
 		return
 	}
 
@@ -416,11 +495,24 @@ func (m *Manager) onLxdEvent(e lxdApi.Event) {
 	}
 	action := match[1]
 
+	if action == "deleted" {
+		return
+	}
+
+	w, err := m.Get(user)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"user": user,
+			"err":  err,
+		}).Error("Failed to retrieve webspace")
+		return
+	}
+
 	var running bool
 	switch action {
 	case "started":
 		running = true
-	case "shutdown":
+	case "shutdown", "created":
 		running = false
 	case "updated":
 		state, _, err := m.lxd.GetInstanceState(w.InstanceName())
@@ -438,15 +530,33 @@ func (m *Manager) onLxdEvent(e lxdApi.Event) {
 		return
 	}
 
+	var addr string
+	if running {
+		addr, err = w.AwaitIP()
+		if err != nil {
+			log.WithField("err", err).Error("Failed to get instance IP address")
+			return
+		}
+	}
+
 	log.WithFields(log.Fields{
 		"user":    user,
 		"running": running,
-	}).Debug("Updating Traefik config")
-	if err := m.traefik.UpdateConfig(w, running); err != nil {
+	}).Debug("Updating Traefik / port forward config")
+
+	if err := m.traefik.GenerateConfig(w, addr); err != nil {
 		log.WithFields(log.Fields{
 			"user": user,
 			"err":  err,
 		}).Error("Failed to update Traefik config")
+		return
+	}
+
+	if err := m.ports.AddAll(w, addr); err != nil {
+		log.WithFields(log.Fields{
+			"user": user,
+			"err":  err,
+		}).Error("Failed to update port forwards")
 	}
 }
 

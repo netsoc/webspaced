@@ -3,9 +3,7 @@ package webspace
 import (
 	"fmt"
 	"strings"
-	"time"
 
-	"github.com/cenkalti/backoff/v4"
 	"github.com/go-redis/redis/v7"
 	"github.com/netsoc/webspace-ng/webspaced/internal/config"
 	log "github.com/sirupsen/logrus"
@@ -30,10 +28,8 @@ func NewTraefik(cfg *config.Config) *Traefik {
 	}
 }
 
-// UpdateConfig generates new Traefik configuration for a webspace
-func (t *Traefik) UpdateConfig(ws *Webspace, running bool) error {
-	n := ws.InstanceName()
-
+// ClearConfig cleans out any configuration for an instance
+func (t *Traefik) ClearConfig(n string) error {
 	if _, err := t.redis.TxPipelined(func(pipe redis.Pipeliner) error {
 		pipe.Del(
 			fmt.Sprintf("traefik/http/services/%v/loadbalancer/servers/0/url", n),
@@ -76,20 +72,16 @@ func (t *Traefik) UpdateConfig(ws *Webspace, running bool) error {
 		return fmt.Errorf("failed to delete redis keys: %w", err)
 	}
 
-	if !running {
+	return nil
+}
+
+// GenerateConfig generates new Traefik configuration for a webspace
+func (t *Traefik) GenerateConfig(ws *Webspace, addr string) error {
+	n := ws.InstanceName()
+
+	// TODO: generate config with poking of backend to start webspace
+	if addr == "" {
 		return nil
-	}
-
-	back := backoff.NewExponentialBackOff()
-	back.MaxElapsedTime = 20 * time.Second
-
-	var addr string
-	if err := backoff.Retry(func() error {
-		var err error
-		addr, err = ws.GetIP()
-		return err
-	}, back); err != nil {
-		return fmt.Errorf("failed to get instance IP address: %w", err)
 	}
 
 	rules := make([]string, len(ws.Domains))
