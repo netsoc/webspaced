@@ -154,6 +154,10 @@ func (p *PortsManager) Update(all []*Webspace, w *Webspace, addr string) error {
 	allPorts := make(map[uint16]struct{})
 	for _, w := range all {
 		for e := range w.Ports {
+			if _, ok := allPorts[e]; ok {
+				return fmt.Errorf("more than one webspace uses external port %v", e)
+			}
+
 			allPorts[e] = struct{}{}
 		}
 	}
