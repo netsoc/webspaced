@@ -18,7 +18,6 @@ type PortForward struct {
 	backendAddr *net.TCPAddr
 	hook        PortHook
 	listener    *net.TCPListener
-	shutdown    chan struct{}
 }
 
 // NewPortForward creates and starts a port forward
@@ -38,7 +37,6 @@ func NewPortForward(e uint16, backendAddr *net.TCPAddr, hook PortHook) (*PortFor
 		backendAddr,
 		hook,
 		listener,
-		make(chan struct{}),
 	}, nil
 }
 
@@ -53,6 +51,10 @@ func (f *PortForward) handleClient(client *net.TCPConn) {
 		return
 	}
 
+	log.WithFields(log.Fields{
+		"ePort":   f.ePort,
+		"backend": f.backendAddr,
+	}).Trace("Forwarding connection...")
 	backend, err := net.DialTCP("tcp", nil, f.backendAddr)
 	if err != nil {
 		log.WithFields(log.Fields{
@@ -76,16 +78,11 @@ func (f *PortForward) handleClient(client *net.TCPConn) {
 	go pipe(client, backend)
 	go pipe(backend, client)
 
-	done := make(chan struct{})
-	go func() {
-		wg.Wait()
-		close(done)
-	}()
-
-	select {
-	case <-done:
-	case <-f.shutdown:
-	}
+	wg.Wait()
+	log.WithFields(log.Fields{
+		"ePort":   f.ePort,
+		"backend": f.backendAddr,
+	}).Trace("Forwarded connection ended normally")
 }
 
 // Run starts the port forward
@@ -98,7 +95,6 @@ func (f *PortForward) Run() {
 				"backend": f.backendAddr,
 				"err":     err,
 			}).Info("Ending port forward")
-			close(f.shutdown)
 			return
 		}
 
@@ -172,12 +168,18 @@ func (p *PortsManager) Trim(all []*Webspace) error {
 
 // AddAll adds / updates port forwards for a given webspace
 func (p *PortsManager) AddAll(w *Webspace, addr string) error {
-	for e := range w.Ports {
+	for e, i := range w.Ports {
 		if _, ok := p.forwards[e]; ok {
 			p.Remove(e)
 		}
 
-		hook := func(p *PortForward) error {
+		hook := func(f *PortForward) error {
+			log.WithFields(log.Fields{
+				"user":  w.User,
+				"ePort": e,
+				"iPort": i,
+			}).Debug("Waiting for webspace to start to forward port")
+
 			if err := w.EnsureStarted(); err != nil {
 				return fmt.Errorf("failed to ensure webspace was started: %w", err)
 			}
@@ -187,18 +189,18 @@ func (p *PortsManager) AddAll(w *Webspace, addr string) error {
 				return fmt.Errorf("failed to await webspace IP: %w", err)
 			}
 
-			backendAddr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("%v:%v", addr, e))
+			backendAddr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("%v:%v", addr, i))
 			if err != nil {
 				panic(err)
 			}
-			p.backendAddr = backendAddr
+			f.backendAddr = backendAddr
 			return nil
 		}
 
 		var backendAddr *net.TCPAddr
 		if addr != "" {
 			var err error
-			backendAddr, err = net.ResolveTCPAddr("tcp", fmt.Sprintf("%v:%v", addr, e))
+			backendAddr, err = net.ResolveTCPAddr("tcp", fmt.Sprintf("%v:%v", addr, i))
 			if err != nil {
 				panic(err)
 			}
