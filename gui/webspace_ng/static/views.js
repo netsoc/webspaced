@@ -21,11 +21,13 @@ Vue.component('Navbar', {
     template: `
     <div>
       <div class="sidenav">
-        <i class="fa fa-home fa-lg"> <a href="/dashboard"> Dashboard </a></i>
-        <i class="fa fa-terminal fa-lg"> <a href="/terminal"> Terminal </a></i>
-        <i class="fa fa-cog fa-lg"> <a href="/configs"> Configs </a></i>
-        <i class="fa fa-globe fa-lg"> <a href="/domains"> Domains </a></i>
-        <i class="fa fa-plug fa-lg"> <a href="/ports"> Ports </a></i>
+        <div class="links">
+          <a href="/dashboard"><i class="fa fa-home fa-lg" />  Dashboard </a>
+          <a href="/terminal"><i class="fa fa-terminal fa-lg" />  Terminal </a>
+          <a href="/configs"><i class="fa fa-cog fa-lg" />  Configs </a>
+          <a href="/domains"><i class="fa fa-globe fa-lg" />  Domains </a>
+          <a href="/ports"><i class="fa fa-plug fa-lg" />  Ports </a>
+        </div>
       </div>
     </div>
   `
@@ -43,7 +45,7 @@ Vue.component('Graph', {
 
 Vue.component('Dashboard', {
   template:` 
-  <div>
+  <div class="main">
     <p> Dashboard </p>
     <navbar></navbar>
     <div id="my_dataviz"></div>
@@ -98,7 +100,7 @@ Vue.component('Dashboard', {
 
 Vue.component('Terminal', {
   template:` 
-  <div>
+  <div class="main">
     <navbar></navbar>
     <link rel="stylesheet" href="node_modules/xterm/css/xterm.css" />
     <div id="terminal"></div>
@@ -113,7 +115,7 @@ Vue.component('Terminal', {
 
 Vue.component('Configs', {
   template:` 
-  <div>
+  <div class="main">
     <div>
       <h2>HTTP/HTTPS Ports</h2>
       <input type="text" placeholder="HTTP Port">
@@ -136,7 +138,7 @@ Vue.component('Configs', {
 
 Vue.component('Domains', {
   template:` 
-  <div>
+  <div class="main">
     <h2>Domains</h2>
     <input type="text" placeholder="Domains">
     <navbar></navbar>
@@ -146,7 +148,7 @@ Vue.component('Domains', {
 
 Vue.component('Ports', {
   template:` 
-  <div>
+  <div class="main">
     <h2>External Ports</h2>
     <input type="text" placeholder="External Port">
     <br>
