@@ -11,7 +11,7 @@ services:
       - 127.0.0.1:6379:6379
 
   traefik:
-    image: netsoc/webspace-ng/traefik-redis
+    image: netsoc/webspace-ng-traefik-redis
     build:
       context: .
       dockerfile: Dockerfile.traefik
@@ -27,7 +27,7 @@ services:
     network_mode: host
 
   app:
-    image: netsoc/webspace-ng/webspaced
+    image: netsoc/webspaced
     build:
       context: .
       dockerfile: Dockerfile.release

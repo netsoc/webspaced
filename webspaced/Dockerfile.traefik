@@ -1,4 +1,4 @@
-FROM netsoc/webspace-ng/traefik AS builder
+FROM netsoc/webspace-ng-traefik AS builder
 
 
 FROM alpine:3.11
