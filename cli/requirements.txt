@@ -1,0 +1,4 @@
+requests==2.23.0
+requests_unixsocket==0.2.0
+humanfriendly==8.1
+eventfd==0.2

@@ -87,19 +87,15 @@ func UserMiddleware(next http.Handler) http.Handler {
 		username, err := s.pwGrProxy.LookupUID(pcred.Uid)
 		if err != nil {
 			username = fmt.Sprintf("u%v", pcred.Uid)
-			log.WithFields(log.Fields{
-				"err":      err,
-				"fallback": username,
-			}).Warn("Coudln't find username for UID, using fallback")
+			log.WithField("fallback", username).WithError(err).Warn("Coudln't find username for UID, using fallback")
 		}
 
 		isAdmin, err := s.pwGrProxy.UserIsMember(username, s.Config.Webspaces.AdminGroup)
 		if err != nil {
 			log.WithFields(log.Fields{
-				"err":   err,
 				"user":  username,
 				"group": s.Config.Webspaces.AdminGroup,
-			}).Warn("Failed to check if user is in admin group")
+			}).WithError(err).Warn("Failed to check if user is in admin group")
 		}
 
 		if isAdmin || pcred.Uid == 0 {
@@ -153,7 +149,8 @@ func NewServer(config config.Config) *Server {
 	wsOpRouter.HandleFunc("", s.apiGetWebspace).Methods("GET")
 	wsOpRouter.HandleFunc("", s.apiDeleteWebspace).Methods("DELETE")
 
-	wsOpRouter.HandleFunc("/state", s.apiWebspaceState).Methods("POST", "PUT", "DELETE")
+	wsOpRouter.HandleFunc("/state", s.apiGetWebspaceState).Methods("GET")
+	wsOpRouter.HandleFunc("/state", s.apiSetWebspaceState).Methods("POST", "PUT", "DELETE")
 
 	wsOpRouter.HandleFunc("/config", s.apiGetWebspaceConfig).Methods("GET")
 	wsOpRouter.HandleFunc("/config", s.apiUpdateWebspaceConfig).Methods("PATCH")
@@ -165,11 +162,14 @@ func NewServer(config config.Config) *Server {
 	wsOpRouter.HandleFunc("/ports/{ePort}/{iPort}", s.apiWebspacePorts).Methods("POST")
 	wsOpRouter.HandleFunc("/ports/{port}", s.apiWebspacePorts).Methods("POST", "DELETE")
 
+	wsOpRouter.HandleFunc("/console", s.apiConsoleLog).Methods("GET")
+
 	internalWsOpRouter := r.PathPrefix("/internal").Subrouter()
 	internalWsOpRouter.Use(s.getWebspaceMiddleware)
 	internalWsOpRouter.HandleFunc("/ensure-started", s.internalAPIEnsureStarted).Methods("POST")
 
 	r.NotFoundHandler = http.HandlerFunc(s.apiNotFound)
+	r.MethodNotAllowedHandler = http.HandlerFunc(s.apiMethodNotAllowed)
 
 	return s
 }
@@ -218,4 +218,8 @@ func (s *Server) Stop() error {
 
 func (s *Server) apiNotFound(w http.ResponseWriter, r *http.Request) {
 	JSONErrResponse(w, errors.New("API endpoint not found"), http.StatusNotFound)
+}
+
+func (s *Server) apiMethodNotAllowed(w http.ResponseWriter, r *http.Request) {
+	JSONErrResponse(w, errors.New("Method not allowed on API endpoint"), http.StatusMethodNotAllowed)
 }

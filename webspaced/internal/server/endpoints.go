@@ -4,39 +4,22 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 
 	"github.com/gorilla/mux"
-	lxdApi "github.com/lxc/lxd/shared/api"
 	"github.com/netsoc/webspace-ng/webspaced/internal/webspace"
 )
 
-type simpleImageRes struct {
-	Aliases     []lxdApi.ImageAlias `json:"aliases"`
-	Fingerprint string              `json:"fingerprint"`
-	Properties  map[string]string   `json:"properties"`
-	Size        int64               `json:"size"`
-}
-
 func (s *Server) apiImages(w http.ResponseWriter, r *http.Request) {
-	images, err := s.lxd.GetImages()
+	images, err := s.Webspaces.Images()
 	if err != nil {
 		JSONErrResponse(w, err, http.StatusInternalServerError)
 		return
 	}
 
-	resImages := make([]simpleImageRes, len(images))
-	for i, image := range images {
-		resImages[i] = simpleImageRes{
-			Aliases:     image.Aliases,
-			Fingerprint: image.Fingerprint,
-			Properties:  image.ImagePut.Properties,
-			Size:        image.Size,
-		}
-	}
-
-	JSONResponse(w, resImages, http.StatusOK)
+	JSONResponse(w, images, http.StatusOK)
 }
 
 type createWebspaceReq struct {
@@ -55,7 +38,8 @@ func wsErrorToStatus(err error) int {
 	case errors.Is(err, webspace.ErrExists), errors.Is(err, webspace.ErrRunning), errors.Is(err, webspace.ErrUsed):
 		return http.StatusConflict
 	case errors.Is(err, webspace.ErrDomainUnverified), errors.Is(err, webspace.ErrBadPort),
-		errors.Is(err, webspace.ErrTooManyPorts), errors.Is(err, webspace.ErrDefaultDomain):
+		errors.Is(err, webspace.ErrTooManyPorts), errors.Is(err, webspace.ErrDefaultDomain),
+		errors.Is(err, webspace.ErrBadValue):
 		return http.StatusBadRequest
 	default:
 		return http.StatusInternalServerError
@@ -105,7 +89,7 @@ func (s *Server) apiDeleteWebspace(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (s *Server) apiWebspaceState(w http.ResponseWriter, r *http.Request) {
+func (s *Server) apiSetWebspaceState(w http.ResponseWriter, r *http.Request) {
 	ws := r.Context().Value(keyWebspace).(*webspace.Webspace)
 
 	var err error
@@ -123,6 +107,17 @@ func (s *Server) apiWebspaceState(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+func (s *Server) apiGetWebspaceState(w http.ResponseWriter, r *http.Request) {
+	ws := r.Context().Value(keyWebspace).(*webspace.Webspace)
+
+	state, err := ws.State()
+	if err != nil {
+		JSONErrResponse(w, err, wsErrorToStatus(err))
+		return
+	}
+
+	JSONResponse(w, state, http.StatusOK)
 }
 
 func (s *Server) apiGetWebspaceConfig(w http.ResponseWriter, r *http.Request) {
@@ -231,6 +226,19 @@ func (s *Server) apiWebspacePorts(w http.ResponseWriter, r *http.Request) {
 		}
 
 		w.WriteHeader(http.StatusNoContent)
+	}
+}
+
+func (s *Server) apiConsoleLog(w http.ResponseWriter, r *http.Request) {
+	ws := r.Context().Value(keyWebspace).(*webspace.Webspace)
+	c, err := ws.Log()
+	if err != nil {
+		JSONErrResponse(w, err, wsErrorToStatus(err))
+		return
+	}
+
+	if _, err := io.Copy(w, c); err != nil {
+		JSONErrResponse(w, err, http.StatusInternalServerError)
 	}
 }
 

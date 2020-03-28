@@ -46,8 +46,7 @@ func (f *PortForward) handleClient(client *net.TCPConn) {
 		log.WithFields(log.Fields{
 			"ePort":   f.ePort,
 			"backend": f.backendAddr,
-			"err":     err,
-		}).Warn("Port forward hook execution failed")
+		}).WithError(err).Warn("Port forward hook execution failed")
 		return
 	}
 
@@ -60,8 +59,7 @@ func (f *PortForward) handleClient(client *net.TCPConn) {
 		log.WithFields(log.Fields{
 			"ePort":   f.ePort,
 			"backend": f.backendAddr,
-			"err":     err,
-		}).Warn("Port forward backend connection failed")
+		}).WithError(err).Warn("Port forward backend connection failed")
 		return
 	}
 	defer backend.Close()
@@ -93,8 +91,7 @@ func (f *PortForward) Run() {
 			log.WithFields(log.Fields{
 				"ePort":   f.ePort,
 				"backend": f.backendAddr,
-				"err":     err,
-			}).Info("Ending port forward")
+			}).WithError(err).Info("Ending port forward")
 			return
 		}
 

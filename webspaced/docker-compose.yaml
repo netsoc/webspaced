@@ -20,7 +20,6 @@ services:
       - --entryPoints.http.address=:80
       - --entryPoints.https.address=:443
       - --api.dashboard=true
-      - --log.level=DEBUG
       - --accesslog=true
     environment:
       - REDIS_HOST=127.0.0.1
