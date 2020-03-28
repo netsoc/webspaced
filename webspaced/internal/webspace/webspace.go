@@ -117,11 +117,11 @@ func (w *Webspace) simpleExec(cmd string) (string, string, error) {
 	output := op.Metadata["output"].(map[string]interface{})
 	outReader, err := w.manager.lxd.GetInstanceLogfile(n, lxdLogFilenameRegex.FindStringSubmatch(output["1"].(string))[1])
 	if err != nil {
-		return "", "", fmt.Errorf("failed to retrieve LXD command stdout: %w", err)
+		return "", "", fmt.Errorf("failed to retrieve LXD command stdout: %w", convertLXDError(err))
 	}
 	errReader, err := w.manager.lxd.GetInstanceLogfile(n, lxdLogFilenameRegex.FindStringSubmatch(output["2"].(string))[1])
 	if err != nil {
-		return "", "", fmt.Errorf("failed to retrieve LXD command stderr: %w", err)
+		return "", "", fmt.Errorf("failed to retrieve LXD command stderr: %w", convertLXDError(err))
 	}
 
 	outData, err := ioutil.ReadAll(outReader)
@@ -157,7 +157,7 @@ func (w *Webspace) Delete() error {
 
 	state, _, err := w.manager.lxd.GetInstanceState(n)
 	if err != nil {
-		return fmt.Errorf("failed to get LXD instance state: %w", err)
+		return fmt.Errorf("failed to get LXD instance state: %w", convertLXDError(err))
 	}
 
 	if state.StatusCode == lxdApi.Running {
@@ -168,11 +168,11 @@ func (w *Webspace) Delete() error {
 
 	op, err := w.manager.lxd.DeleteInstance(n)
 	if err != nil {
-		return fmt.Errorf("failed to delete LXD instance: %w", err)
+		return fmt.Errorf("failed to delete LXD instance: %w", convertLXDError(err))
 	}
 
 	if err := op.Wait(); err != nil {
-		return fmt.Errorf("failed to delete LXD instance: %w", err)
+		return fmt.Errorf("failed to delete LXD instance: %w", convertLXDError(err))
 	}
 
 	return nil
@@ -356,7 +356,7 @@ func (w *Webspace) GetIP(state *lxdApi.InstanceState) (string, error) {
 		var err error
 		state, _, err = w.manager.lxd.GetInstanceState(n)
 		if err != nil {
-			return "", fmt.Errorf("failed to get LXD instance state: %w", err)
+			return "", fmt.Errorf("failed to get LXD instance state: %w", convertLXDError(err))
 		}
 	}
 
@@ -406,7 +406,7 @@ func (w *Webspace) AwaitIP() (string, error) {
 func (w *Webspace) EnsureStarted() (string, error) {
 	state, _, err := w.manager.lxd.GetInstanceState(w.InstanceName())
 	if err != nil {
-		return "", fmt.Errorf("failed to get LXD instance state: %w", err)
+		return "", fmt.Errorf("failed to get LXD instance state: %w", convertLXDError(err))
 	}
 
 	if state.StatusCode == lxdApi.Running {
@@ -476,7 +476,7 @@ type State struct {
 func (w *Webspace) State() (*State, error) {
 	ls, _, err := w.manager.lxd.GetInstanceState(w.InstanceName())
 	if err != nil {
-		return nil, fmt.Errorf("failed to get LXD instance state: %w", err)
+		return nil, fmt.Errorf("failed to get LXD instance state: %w", convertLXDError(err))
 	}
 
 	s := State{
@@ -535,5 +535,9 @@ func (w *Webspace) State() (*State, error) {
 
 // Log returns the webspace's `/dev/console` log
 func (w *Webspace) Log() (io.ReadCloser, error) {
-	return w.manager.lxd.GetInstanceConsoleLog(w.InstanceName(), nil)
+	log, err := w.manager.lxd.GetInstanceConsoleLog(w.InstanceName(), nil)
+	if err != nil {
+		return nil, convertLXDError(err)
+	}
+	return log, nil
 }

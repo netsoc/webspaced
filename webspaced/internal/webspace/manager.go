@@ -42,7 +42,7 @@ func (m *Manager) Start() error {
 	for _, w := range webspaces {
 		state, _, err := m.lxd.GetInstanceState(w.InstanceName())
 		if err != nil {
-			return fmt.Errorf("failed to retrieve LXD instance state: %w", err)
+			return fmt.Errorf("failed to retrieve LXD instance state: %w", convertLXDError(err))
 		}
 
 		running := state.StatusCode == lxdApi.Running
@@ -70,7 +70,7 @@ func (m *Manager) Start() error {
 
 	m.lxdListener, err = m.lxd.GetEvents()
 	if err != nil {
-		return fmt.Errorf("failed to get LXD event listener: %w", err)
+		return fmt.Errorf("failed to get LXD event listener: %w", convertLXDError(err))
 	}
 	m.lxdListener.AddHandler([]string{"lifecycle"}, m.onLxdEvent)
 
