@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"math/rand"
 	"net"
 	"regexp"
@@ -501,4 +502,9 @@ func (w *Webspace) State() (*State, error) {
 	}
 
 	return &s, nil
+}
+
+// Log returns the webspace's `/dev/console` log
+func (w *Webspace) Log() (io.ReadCloser, error) {
+	return w.manager.lxd.GetInstanceConsoleLog(w.InstanceName(), nil)
 }

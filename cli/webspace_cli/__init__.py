@@ -28,8 +28,8 @@ def main():
     p_status = subparsers.add_parser('status', help='Show the status of your webspace')
     p_status.set_defaults(func=status)
 
-    #p_log = subparsers.add_parser('log', help="Retrieve your webspace's system log")
-    #p_log.set_defaults(func=log)
+    p_log = subparsers.add_parser('log', help="Retrieve your webspace's system log")
+    p_log.set_defaults(func=log)
 
     #p_exec = subparsers.add_parser('exec', help='Run a command in your webspace')
     #p_exec.add_argument('command', help='Command to run')

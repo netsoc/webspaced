@@ -290,3 +290,14 @@ Errors:
  - Webspace does not exist (HTTP 404 Not Found)
  - Invalid port(s) (HTTP 400 Bad Request)
  - Port mapping does not exist (HTTP 404 Not Found)
+
+## `/v1/webspace/console`
+### GET
+Retrieve the webspace's console log.
+
+Response:
+
+HTTP 200 response containing the console log in plain text
+
+Errors:
+ - Webspace does not exist (HTTP 404 Not Found)

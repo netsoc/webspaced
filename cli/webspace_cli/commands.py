@@ -181,10 +181,10 @@ def status(client, _args):
                 print('   IPv{} address: {}/{}'.format('6' if addr['family'] == 'inet6' else '4',
                     addr['address'], addr['netmask']))
 
-#@cmd
-#def log(client, _args):
-#    print(client.log())
-#
+@cmd
+def log(client, _args):
+    print(client.req('GET', '/v1/webspace/console', plain=True))
+
 #def _console(client, command=None, environment={}):
 #    t_width, t_height = shutil.get_terminal_size()
 #    if not command:

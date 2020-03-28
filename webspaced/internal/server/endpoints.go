@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 
@@ -243,6 +244,19 @@ func (s *Server) apiWebspacePorts(w http.ResponseWriter, r *http.Request) {
 		}
 
 		w.WriteHeader(http.StatusNoContent)
+	}
+}
+
+func (s *Server) apiConsoleLog(w http.ResponseWriter, r *http.Request) {
+	ws := r.Context().Value(keyWebspace).(*webspace.Webspace)
+	c, err := ws.Log()
+	if err != nil {
+		JSONErrResponse(w, err, wsErrorToStatus(err))
+		return
+	}
+
+	if _, err := io.Copy(w, c); err != nil {
+		JSONErrResponse(w, err, http.StatusInternalServerError)
 	}
 }
 
