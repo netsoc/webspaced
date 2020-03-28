@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"math/rand"
 	"net"
 	"regexp"
@@ -73,6 +74,7 @@ func convertLXDError(err error) error {
 
 var lxdEventUserRegexTpl = `^/1\.0/\S+/(\S+)%v$`
 var lxdEventActionRegex = regexp.MustCompile(`^\S+-(\S+)$`)
+var lxdLogFilenameRegex = regexp.MustCompile(`/1.0/containers/\S+/logs/(\S+)`)
 
 // Webspace represents a webspace with all of its configuration and state
 type Webspace struct {
@@ -97,24 +99,51 @@ func (w *Webspace) lxdConfig() (string, error) {
 	return string(confJSON), nil
 }
 
-func (w *Webspace) simpleExec(cmd string) error {
+func (w *Webspace) simpleExec(cmd string) (string, string, error) {
 	n := w.InstanceName()
 
-	op, err := w.manager.lxd.ExecInstance(n, lxdApi.InstanceExecPost{
-		Command: []string{"sh", "-c", cmd},
+	asyncOp, err := w.manager.lxd.ExecInstance(n, lxdApi.InstanceExecPost{
+		Command:      []string{"sh", "-c", cmd},
+		RecordOutput: true,
 	}, nil)
 	if err != nil {
-		return fmt.Errorf("failed to execute command in LXD instance: %w", convertLXDError(err))
+		return "", "", fmt.Errorf("failed to execute command in LXD instance: %w", convertLXDError(err))
 	}
-	if err := op.Wait(); err != nil {
-		return fmt.Errorf("failed to execute command in LXD instance: %w", convertLXDError(err))
+	if err := asyncOp.Wait(); err != nil {
+		return "", "", fmt.Errorf("failed to execute command in LXD instance: %w", convertLXDError(err))
 	}
 
-	code := op.Get().Metadata["return"]
-	if code != 0. {
-		return fmt.Errorf("failed to execute command in LXD instance: non-zero exit code %v", code)
+	op := asyncOp.Get()
+	output := op.Metadata["output"].(map[string]interface{})
+	outReader, err := w.manager.lxd.GetInstanceLogfile(n, lxdLogFilenameRegex.FindStringSubmatch(output["1"].(string))[1])
+	if err != nil {
+		return "", "", fmt.Errorf("failed to retrieve LXD command stdout: %w", err)
 	}
-	return nil
+	errReader, err := w.manager.lxd.GetInstanceLogfile(n, lxdLogFilenameRegex.FindStringSubmatch(output["2"].(string))[1])
+	if err != nil {
+		return "", "", fmt.Errorf("failed to retrieve LXD command stderr: %w", err)
+	}
+
+	outData, err := ioutil.ReadAll(outReader)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to read LXD command stdout: %w", err)
+	}
+	outReader.Close()
+
+	errData, err := ioutil.ReadAll(errReader)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to read LXD command stderr: %w", err)
+	}
+	errReader.Close()
+
+	stdout := string(outData)
+	stderr := string(errData)
+
+	code := op.Metadata["return"]
+	if code != 0. {
+		return stdout, stderr, fmt.Errorf("failed to execute command in LXD instance: non-zero exit code %v", code)
+	}
+	return stdout, stderr, nil
 }
 
 // InstanceName uses the suffix to calculate the name of the instance

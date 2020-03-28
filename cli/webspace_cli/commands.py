@@ -149,7 +149,11 @@ def init(client, args):
         body['sshKey'] = args.ssh_key
 
     with process('Creating your webspace...', done=' success!'):
-        client.req('POST', '/v1/webspace', body)
+        info = client.req('POST', '/v1/webspace', body)
+    for e, i in info['ports'].items():
+        if i == 22:
+            print(f'Your webspace is accessible over SSH on port {e}')
+            break
 
 @cmd
 def status(client, _args):

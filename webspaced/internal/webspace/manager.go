@@ -335,24 +335,72 @@ func (m *Manager) Create(user string, image string, password string, sshKey stri
 	}
 
 	if password != "" || sshKey != "" {
-		if err := w.Boot(); err != nil {
+		if _, err := w.EnsureStarted(); err != nil {
 			return nil, err
 		}
 	}
 	if password != "" {
-		if err := w.simpleExec(fmt.Sprintf(`echo "root:%v" | chpasswd`, password)); err != nil {
+		if stdout, stderr, err := w.simpleExec(fmt.Sprintf(`echo "root:%v" | chpasswd`, password)); err != nil {
+			log.WithFields(log.Fields{
+				"user":   user,
+				"err":    err,
+				"stdout": stdout,
+				"stderr": stderr,
+			}).Error("Failed to set root password")
 			return nil, fmt.Errorf("failed to set root password: %w", err)
 		}
 	}
 	if sshKey != "" {
-		// TODO: install sshd
-		cmd := fmt.Sprintf(`mkdir -p /root/.ssh && echo "%v" > /root/.ssh/authorized_keys`, sshKey)
-		if err := w.simpleExec(cmd); err != nil {
-			return nil, fmt.Errorf("failed to store ssh public key: %w", err)
+		img, _, err := m.lxd.GetImage(image)
+		if err != nil {
+			return nil, fmt.Errorf("failed to retrieve LXD image info: %w", convertLXDError(err))
 		}
 
-		if _, err := w.AddPort(0, 22); err != nil {
-			return nil, fmt.Errorf("failed to add SSH port forward: %w", err)
+		if os, ok := img.Properties["os"]; ok {
+			var cmd string
+			switch os {
+			case "Alpine":
+				cmd = "apk update && apk add dropbear && rc-update add dropbear"
+			case "Archlinux":
+				cmd = "pacman -Sy --noconfirm openssh && systemctl enable sshd"
+			case "ubuntu":
+				cmd = "true"
+			case "Debian":
+				cmd = "apt-get -qy update && apt-get -qy install openssh-server"
+			case "Fedora", "Centos":
+				cmd = "dnf install -qy openssh-server && systemctl enable sshd"
+			default:
+				log.WithField("os", os).Warn("Unknown OS, unable to install sshd")
+			}
+
+			if cmd != "" {
+				if stdout, stderr, err := w.simpleExec(cmd); err != nil {
+					log.WithFields(log.Fields{
+						"user":   user,
+						"err":    err,
+						"stdout": stdout,
+						"stderr": stderr,
+					}).Error("Failed to install sshd")
+					return nil, fmt.Errorf("failed to install sshd: %w", err)
+				}
+
+				cmd := fmt.Sprintf(`mkdir -p /root/.ssh && echo "%v" > /root/.ssh/authorized_keys`, sshKey)
+				if stdout, stderr, err := w.simpleExec(cmd); err != nil {
+					log.WithFields(log.Fields{
+						"user":   user,
+						"err":    err,
+						"stdout": stdout,
+						"stderr": stderr,
+					}).Error("Failed to store ssh public key")
+					return nil, fmt.Errorf("failed to store ssh public key: %w", err)
+				}
+
+				if _, err := w.AddPort(0, 22); err != nil {
+					return nil, fmt.Errorf("failed to add SSH port forward: %w", err)
+				}
+			}
+		} else {
+			log.WithField("fingerprint", image).Warn("Image has no `os` property, unable to install sshd")
 		}
 	}
 	if password != "" || sshKey != "" {
