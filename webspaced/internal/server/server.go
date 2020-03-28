@@ -173,6 +173,7 @@ func NewServer(config config.Config) *Server {
 	internalWsOpRouter.HandleFunc("/ensure-started", s.internalAPIEnsureStarted).Methods("POST")
 
 	r.NotFoundHandler = http.HandlerFunc(s.apiNotFound)
+	r.MethodNotAllowedHandler = http.HandlerFunc(s.apiMethodNotAllowed)
 
 	return s
 }
@@ -221,4 +222,8 @@ func (s *Server) Stop() error {
 
 func (s *Server) apiNotFound(w http.ResponseWriter, r *http.Request) {
 	JSONErrResponse(w, errors.New("API endpoint not found"), http.StatusNotFound)
+}
+
+func (s *Server) apiMethodNotAllowed(w http.ResponseWriter, r *http.Request) {
+	JSONErrResponse(w, errors.New("Method not allowed on API endpoint"), http.StatusMethodNotAllowed)
 }
