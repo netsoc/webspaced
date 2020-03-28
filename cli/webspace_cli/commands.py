@@ -303,19 +303,20 @@ def config_set(client, args):
         args.option: args.value
     })
 
-#@cmd
-#def domains_show(client, args):
-#    domains = client.get_domains()
-#    print('Webspace domains:')
-#    for domain in domains:
-#        print(' - {}'.format(domain))
-#@cmd
-#def domains_add(client, args):
-#    client.add_domain(args.domain)
-#@cmd
-#def domains_remove(client, args):
-#    client.remove_domain(args.domain)
-#
+@cmd
+def domains_show(client, args):
+    domains = client.req('GET', '/v1/webspace/domains')
+    print('Webspace domains:')
+    for domain in domains:
+        print(' - {}'.format(domain))
+@cmd
+def domains_add(client, args):
+    with process('Verifying and adding domain...'):
+        client.req('POST', f'/v1/webspace/domains/{args.domain}')
+@cmd
+def domains_remove(client, args):
+    client.req('DELETE', f'/v1/webspace/domains/{args.domain}')
+
 #@cmd
 #def ports_show(client, args):
 #    ports = client.get_ports()
