@@ -50,6 +50,9 @@ var ErrInterface = errors.New("default network interface not present")
 // ErrAddress indicates the interface didn't have an IPv4 address
 var ErrAddress = errors.New("ipv4 address not found")
 
+// ErrBadValue indicates an invalid value for a config option
+var ErrBadValue = errors.New("invalid value for configuration option")
+
 // convertLXDError is a HACK: LXD doesn't seem to return a code we can use to determine the error...
 func convertLXDError(err error) error {
 	switch err.Error() {
@@ -81,6 +84,10 @@ type Webspace struct {
 }
 
 func (w *Webspace) lxdConfig() (string, error) {
+	if w.Config.StartupDelay < 0 {
+		return "", ErrBadValue
+	}
+
 	confJSON, err := json.Marshal(w)
 	if err != nil {
 		return "", fmt.Errorf("failed to serialize webspace config for LXD: %w", err)

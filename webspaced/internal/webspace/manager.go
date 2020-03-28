@@ -208,6 +208,10 @@ func (m *Manager) instanceToWebspace(i *lxdApi.Instance) (*Webspace, error) {
 		return nil, fmt.Errorf("failed to parse webspace configuration stored in LXD: %w", err)
 	}
 
+	if w.Config.StartupDelay < 0 {
+		return nil, ErrBadValue
+	}
+
 	return w, nil
 }
 

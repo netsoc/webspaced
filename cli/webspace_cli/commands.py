@@ -145,7 +145,7 @@ def init(client, args):
     if 'ssh_key' in args:
         body['sshKey'] = args.ssh_key
 
-    with process('Creating your container...', done=' success!'):
+    with process('Creating your webspace...', done=' success!'):
         client.req('POST', '/v1/webspace', body)
 
 @cmd
@@ -259,17 +259,17 @@ def status(client, _args):
 
 @cmd
 def boot(client, _args):
-    with process('Starting your container...'):
+    with process('Starting your webspace...'):
         client.req('POST', '/v1/webspace/state')
 
 @cmd
 def shutdown(client, _args):
-    with process('Shutting your container down...'):
+    with process('Shutting your webspace down...'):
         client.req('DELETE', '/v1/webspace/state')
 
 @cmd
 def reboot(client, _args):
-    with process('Rebooting your container...'):
+    with process('Rebooting your webspace...'):
         client.req('PUT', '/v1/webspace/state')
 
 @cmd
@@ -277,26 +277,36 @@ def delete(client, _args):
     if not ask('Are you sure?', default='no'):
         return
 
-    with process('Deleting your container...'):
+    with process('Deleting your webspace...'):
         client.req('DELETE', '/v1/webspace')
 
-#@cmd
-#def config_show(client, args):
-#    config = client.get_config()
-#    print('Container configuration:')
-#    for k, v in config.items():
-#        print('{}: {}'.format(k, v))
-#@cmd
-#def config_set(client, args):
-#    client.set_option(args.key, args.value)
-#@cmd
-#def config_unset(client, args):
-#    client.unset_option(args.key)
-#
+@cmd
+def config_show(client, _args):
+    config = client.req('GET', '/v1/webspace/config')
+    print('Webspace configuration:')
+
+    print(f'Startup delay: {format_timespan(config["startupDelay"])}')
+    print(f'HTTP port: {config["httpPort"]}')
+
+    if config['httpsPort'] == 0:
+        print('SSL termination is enabled')
+    else:
+        print(f'SSL termination is disabled - HTTPS port: {config["httpsPort"]}')
+@cmd
+def config_set(client, args):
+    if args.option in ('httpPort', 'httpsPort'):
+        args.value = int(args.value)
+    elif args.option == 'startupDelay':
+        args.value = float(args.value)
+
+    client.req('PATCH', '/v1/webspace/config', {
+        args.option: args.value
+    })
+
 #@cmd
 #def domains_show(client, args):
 #    domains = client.get_domains()
-#    print('Container domains:')
+#    print('Webspace domains:')
 #    for domain in domains:
 #        print(' - {}'.format(domain))
 #@cmd
@@ -309,13 +319,13 @@ def delete(client, _args):
 #@cmd
 #def ports_show(client, args):
 #    ports = client.get_ports()
-#    print('Container ports:')
+#    print('Webspace ports:')
 #    for iport, eport in ports.items():
 #        print(' - {} -> {}'.format(eport, iport))
 #@cmd
 #def ports_add(client, args):
 #    eport = client.add_port(args.iport, args.eport)
-#    print('Port {} in your container is now accessible externally via port {}'.format(args.iport, eport))
+#    print('Port {} in your webspace is now accessible externally via port {}'.format(args.iport, eport))
 #@cmd
 #def ports_remove(client, args):
 #    client.remove_port(args.iport)

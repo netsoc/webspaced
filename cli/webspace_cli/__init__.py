@@ -17,59 +17,55 @@ def main():
     p_images = subparsers.add_parser('images', help='List available images')
     p_images.set_defaults(func=images)
 
-    p_init = subparsers.add_parser('init', help='Create your container',
+    p_init = subparsers.add_parser('init', help='Create your webspace',
                                    formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     p_init.add_argument('--no-password', help='Disable root password', action='store_true')
     p_init.add_argument('-k', '--ssh-key', help='SSH public key to install in webspace (creates port forward)')
     p_init.add_argument('image',
-                        help='Image alias / fingerprint to create your container from')
+                        help='Image alias / fingerprint to create your webspace from')
     p_init.set_defaults(func=init)
 
-    p_status = subparsers.add_parser('status', help='Show the status of your container')
+    p_status = subparsers.add_parser('status', help='Show the status of your webspace')
     p_status.set_defaults(func=status)
 
-    #p_log = subparsers.add_parser('log', help="Retrieve your container's system log")
+    #p_log = subparsers.add_parser('log', help="Retrieve your webspace's system log")
     #p_log.set_defaults(func=log)
 
-    #p_exec = subparsers.add_parser('exec', help='Run a command in your container')
+    #p_exec = subparsers.add_parser('exec', help='Run a command in your webspace')
     #p_exec.add_argument('command', help='Command to run')
     #p_exec.add_argument('args', nargs=argparse.REMAINDER, help='Command arguments')
     #p_exec.set_defaults(func=exec)
 
-    #p_console = subparsers.add_parser('console', help="Attach to your container's console")
+    #p_console = subparsers.add_parser('console', help="Attach to your webspace's console")
     #p_console.set_defaults(func=console)
 
-    #p_exec = subparsers.add_parser('login', help='Shortcut to open a shell in your container \
+    #p_exec = subparsers.add_parser('login', help='Shortcut to open a shell in your webspace \
     #    (logging in with a configured user)')
     #p_exec.set_defaults(func=login)
 
-    p_boot = subparsers.add_parser('boot', help='Start your container')
+    p_boot = subparsers.add_parser('boot', help='Start your webspace')
     p_boot.set_defaults(func=boot)
 
-    p_shutdown = subparsers.add_parser('shutdown', help='Shutdown your container')
+    p_shutdown = subparsers.add_parser('shutdown', help='Shutdown your webspace')
     p_shutdown.set_defaults(func=shutdown)
 
-    p_reboot = subparsers.add_parser('reboot', help='Reboot your container')
+    p_reboot = subparsers.add_parser('reboot', help='Reboot your webspace')
     p_reboot.set_defaults(func=reboot)
 
-    p_delete = subparsers.add_parser('delete', help='Delete your container')
+    p_delete = subparsers.add_parser('delete', help='Delete your webspace')
     p_delete.set_defaults(func=delete)
 
-    #p_config = subparsers.add_parser('config', help="Change your container's options")
-    #p_config.set_defaults(func=config_show)
-    #cfg_sub = p_config.add_subparsers(dest='cfg_command')
+    p_config = subparsers.add_parser('config', help="Change your webspace's options")
+    p_config.set_defaults(func=config_show)
+    cfg_sub = p_config.add_subparsers(dest='cfg_command')
 
-    #cfg_show = cfg_sub.add_parser('show', help='Show container configuration')
-    #cfg_show.set_defaults(function=config_show)
+    cfg_show = cfg_sub.add_parser('show', help='Show webspace configuration')
+    cfg_show.set_defaults(function=config_show)
 
-    #cfg_set = cfg_sub.add_parser('set', help='Set a config option')
-    #cfg_set.add_argument('key', help='Key of option to set')
-    #cfg_set.add_argument('value', help='Value of option to set')
-    #cfg_set.set_defaults(func=config_set)
-
-    #cfg_delete = cfg_sub.add_parser('unset', help='Delete a config option')
-    #cfg_delete.add_argument('key', help='Key of option to delete')
-    #cfg_delete.set_defaults(func=config_unset)
+    cfg_set = cfg_sub.add_parser('set', help='Set a config option')
+    cfg_set.add_argument('option', help='Name of option to set', choices=['startupDelay', 'httpPort', 'httpsPort'])
+    cfg_set.add_argument('value', help='Value of option to set')
+    cfg_set.set_defaults(func=config_set)
 
     #p_dns = subparsers.add_parser('domains', help='Configure custom domains')
     #p_dns.set_defaults(func=domains_show)

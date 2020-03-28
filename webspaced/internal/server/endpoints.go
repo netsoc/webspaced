@@ -55,7 +55,8 @@ func wsErrorToStatus(err error) int {
 	case errors.Is(err, webspace.ErrExists), errors.Is(err, webspace.ErrRunning), errors.Is(err, webspace.ErrUsed):
 		return http.StatusConflict
 	case errors.Is(err, webspace.ErrDomainUnverified), errors.Is(err, webspace.ErrBadPort),
-		errors.Is(err, webspace.ErrTooManyPorts), errors.Is(err, webspace.ErrDefaultDomain):
+		errors.Is(err, webspace.ErrTooManyPorts), errors.Is(err, webspace.ErrDefaultDomain),
+		errors.Is(err, webspace.ErrBadValue):
 		return http.StatusBadRequest
 	default:
 		return http.StatusInternalServerError
