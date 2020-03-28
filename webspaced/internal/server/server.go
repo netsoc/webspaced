@@ -87,19 +87,15 @@ func UserMiddleware(next http.Handler) http.Handler {
 		username, err := s.pwGrProxy.LookupUID(pcred.Uid)
 		if err != nil {
 			username = fmt.Sprintf("u%v", pcred.Uid)
-			log.WithFields(log.Fields{
-				"err":      err,
-				"fallback": username,
-			}).Warn("Coudln't find username for UID, using fallback")
+			log.WithField("fallback", username).WithError(err).Warn("Coudln't find username for UID, using fallback")
 		}
 
 		isAdmin, err := s.pwGrProxy.UserIsMember(username, s.Config.Webspaces.AdminGroup)
 		if err != nil {
 			log.WithFields(log.Fields{
-				"err":   err,
 				"user":  username,
 				"group": s.Config.Webspaces.AdminGroup,
-			}).Warn("Failed to check if user is in admin group")
+			}).WithError(err).Warn("Failed to check if user is in admin group")
 		}
 
 		if isAdmin || pcred.Uid == 0 {

@@ -107,20 +107,17 @@ func (m *Manager) onLxdEvent(e lxdApi.Event) {
 	user := match[1]
 
 	if err := m.traefik.ClearConfig(m.lxdInstanceName(user)); err != nil {
-		log.WithFields(log.Fields{
-			"user": user,
-			"err":  err,
-		}).Error("Failed to clear Traefik config")
+		log.WithField("user", user).WithError(err).Error("Failed to clear Traefik config")
 		return
 	}
 
 	all, err := m.GetAll()
 	if err != nil {
-		log.WithField("err", err).Error("Failed to get all webspaces")
+		log.WithError(err).Error("Failed to get all webspaces")
 		return
 	}
 	if err := m.ports.Trim(all); err != nil {
-		log.WithField("err", err).Error("Failed to trim port forwards")
+		log.WithError(err).Error("Failed to trim port forwards")
 		return
 	}
 
@@ -136,10 +133,7 @@ func (m *Manager) onLxdEvent(e lxdApi.Event) {
 
 	w, err := m.Get(user)
 	if err != nil {
-		log.WithFields(log.Fields{
-			"user": user,
-			"err":  err,
-		}).Error("Failed to retrieve webspace")
+		log.WithField("user", user).WithError(err).Error("Failed to retrieve webspace")
 		return
 	}
 
@@ -152,7 +146,7 @@ func (m *Manager) onLxdEvent(e lxdApi.Event) {
 	case "updated":
 		state, _, err := m.lxd.GetInstanceState(w.InstanceName())
 		if err != nil {
-			log.WithField("err", err).Error("Failed to retrieve LXD instance state")
+			log.WithError(err).Error("Failed to retrieve LXD instance state")
 			return
 		}
 
@@ -169,7 +163,7 @@ func (m *Manager) onLxdEvent(e lxdApi.Event) {
 	if running {
 		addr, err = w.AwaitIP()
 		if err != nil {
-			log.WithField("err", err).Error("Failed to get instance IP address")
+			log.WithError(err).Error("Failed to get instance IP address")
 			return
 		}
 	}
@@ -180,18 +174,12 @@ func (m *Manager) onLxdEvent(e lxdApi.Event) {
 	}).Debug("Updating Traefik / port forward config")
 
 	if err := m.traefik.GenerateConfig(w, addr); err != nil {
-		log.WithFields(log.Fields{
-			"user": user,
-			"err":  err,
-		}).Error("Failed to update Traefik config")
+		log.WithField("user", user).WithError(err).Error("Failed to update Traefik config")
 		return
 	}
 
 	if err := m.ports.AddAll(w, addr); err != nil {
-		log.WithFields(log.Fields{
-			"user": user,
-			"err":  err,
-		}).Error("Failed to update port forwards")
+		log.WithField("user", user).WithError(err).Error("Failed to update port forwards")
 	}
 }
 
@@ -343,10 +331,9 @@ func (m *Manager) Create(user string, image string, password string, sshKey stri
 		if stdout, stderr, err := w.simpleExec(fmt.Sprintf(`echo "root:%v" | chpasswd`, password)); err != nil {
 			log.WithFields(log.Fields{
 				"user":   user,
-				"err":    err,
 				"stdout": stdout,
 				"stderr": stderr,
-			}).Error("Failed to set root password")
+			}).WithError(err).Error("Failed to set root password")
 			return nil, fmt.Errorf("failed to set root password: %w", err)
 		}
 	}
@@ -360,7 +347,7 @@ func (m *Manager) Create(user string, image string, password string, sshKey stri
 			var cmd string
 			switch os {
 			case "Alpine":
-				cmd = "apk update && apk add dropbear && rc-update add dropbear"
+				cmd = "sapk update && apk add dropbear && rc-update add dropbear"
 			case "Archlinux":
 				cmd = "pacman -Sy --noconfirm openssh && systemctl enable sshd"
 			case "ubuntu":
@@ -377,10 +364,9 @@ func (m *Manager) Create(user string, image string, password string, sshKey stri
 				if stdout, stderr, err := w.simpleExec(cmd); err != nil {
 					log.WithFields(log.Fields{
 						"user":   user,
-						"err":    err,
 						"stdout": stdout,
 						"stderr": stderr,
-					}).Error("Failed to install sshd")
+					}).WithError(err).Error("Failed to install sshd")
 					return nil, fmt.Errorf("failed to install sshd: %w", err)
 				}
 
@@ -388,10 +374,9 @@ func (m *Manager) Create(user string, image string, password string, sshKey stri
 				if stdout, stderr, err := w.simpleExec(cmd); err != nil {
 					log.WithFields(log.Fields{
 						"user":   user,
-						"err":    err,
 						"stdout": stdout,
 						"stderr": stderr,
-					}).Error("Failed to store ssh public key")
+					}).WithError(err).Error("Failed to store ssh public key")
 					return nil, fmt.Errorf("failed to store ssh public key: %w", err)
 				}
 
