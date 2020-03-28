@@ -11,23 +11,23 @@ services:
       - 127.0.0.1:6379:6379
 
   traefik:
-    image: netsoc/webspace-ng/traefik
+    image: netsoc/webspace-ng-traefik-redis
     build:
       context: .
       dockerfile: Dockerfile.traefik
-      args:
-        - TRAEFIK_VERSION=2.2
-    environment:
-      - REDIS_HOST=127.0.0.1
     command:
       - --entryPoints.http.address=:80
       - --entryPoints.https.address=:443
       - --log.level=INFO
       - --accesslog=true
+    environment:
+      - REDIS_HOST=127.0.0.1
+    volumes:
+      - ./sockets:/run/webspaced
     network_mode: host
 
   app:
-    image: netsoc/webspace-ng/webspaced
+    image: netsoc/webspaced
     build:
       context: .
       dockerfile: Dockerfile.release

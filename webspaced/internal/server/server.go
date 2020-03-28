@@ -165,6 +165,10 @@ func NewServer(config config.Config) *Server {
 	wsOpRouter.HandleFunc("/ports/{ePort}/{iPort}", s.apiWebspacePorts).Methods("POST")
 	wsOpRouter.HandleFunc("/ports/{port}", s.apiWebspacePorts).Methods("POST", "DELETE")
 
+	internalWsOpRouter := r.PathPrefix("/internal").Subrouter()
+	internalWsOpRouter.Use(s.getWebspaceMiddleware)
+	internalWsOpRouter.HandleFunc("/ensure-started", s.internalAPIEnsureStarted).Methods("POST")
+
 	r.NotFoundHandler = http.HandlerFunc(s.apiNotFound)
 
 	return s

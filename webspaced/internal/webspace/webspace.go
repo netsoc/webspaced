@@ -147,6 +147,7 @@ func (w *Webspace) Boot() error {
 	if err := w.manager.lxdState(w.InstanceName(), "start"); err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -357,23 +358,32 @@ func (w *Webspace) AwaitIP() (string, error) {
 	return addr, nil
 }
 
-// EnsureStarted starts a webspace if it isn't running (delaying by the startup delay)
-func (w *Webspace) EnsureStarted() error {
+// EnsureStarted starts a webspace if it isn't running (delaying by the startup delay) and returns its IP address after
+func (w *Webspace) EnsureStarted() (string, error) {
 	state, _, err := w.manager.lxd.GetInstanceState(w.InstanceName())
 	if err != nil {
-		return fmt.Errorf("failed to get LXD instance state: %w", err)
+		return "", fmt.Errorf("failed to get LXD instance state: %w", err)
 	}
 
 	if state.StatusCode == lxdApi.Running {
-		return nil
+		ip, err := w.GetIP()
+		if err != nil {
+			return "", fmt.Errorf("failed to get webspace IP: %w", err)
+		}
+
+		return ip, nil
 	}
 
 	if err := w.Boot(); err != nil {
-		return fmt.Errorf("failed to start webspace: %w", err)
+		return "", fmt.Errorf("failed to start webspace: %w", err)
 	}
 
 	time.Sleep(time.Duration(w.Config.StartupDelay * float64(time.Second)))
-	return nil
+	ip, err := w.GetIP()
+	if err != nil {
+		return "", fmt.Errorf("failed to get webspace IP: %w", err)
+	}
+	return ip, nil
 }
 
 // Manager manages webspace containers

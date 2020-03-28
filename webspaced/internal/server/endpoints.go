@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -231,4 +232,15 @@ func (s *Server) apiWebspacePorts(w http.ResponseWriter, r *http.Request) {
 
 		w.WriteHeader(http.StatusNoContent)
 	}
+}
+
+func (s *Server) internalAPIEnsureStarted(w http.ResponseWriter, r *http.Request) {
+	ws := r.Context().Value(keyWebspace).(*webspace.Webspace)
+	ip, err := ws.EnsureStarted()
+	if err != nil {
+		JSONErrResponse(w, err, wsErrorToStatus(err))
+		return
+	}
+
+	fmt.Fprint(w, ip)
 }
