@@ -105,7 +105,7 @@ func (s *Server) apiDeleteWebspace(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (s *Server) apiWebspaceState(w http.ResponseWriter, r *http.Request) {
+func (s *Server) apiSetWebspaceState(w http.ResponseWriter, r *http.Request) {
 	ws := r.Context().Value(keyWebspace).(*webspace.Webspace)
 
 	var err error
@@ -123,6 +123,17 @@ func (s *Server) apiWebspaceState(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+func (s *Server) apiGetWebspaceState(w http.ResponseWriter, r *http.Request) {
+	ws := r.Context().Value(keyWebspace).(*webspace.Webspace)
+
+	state, err := ws.State()
+	if err != nil {
+		JSONErrResponse(w, err, wsErrorToStatus(err))
+		return
+	}
+
+	JSONResponse(w, state, http.StatusOK)
 }
 
 func (s *Server) apiGetWebspaceConfig(w http.ResponseWriter, r *http.Request) {

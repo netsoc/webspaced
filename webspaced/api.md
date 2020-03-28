@@ -73,6 +73,71 @@ Errors:
 
 
 ## `/v1/webspace/state`
+### GET
+Get information about the webspace's state.
+
+Response:
+
+HTTP 200 body similar to the following (when running):
+```json
+{
+  "running": true,
+  "usage": {
+    "cpu": 685502875,
+    "disks": {},
+    "memory": 10452992,
+    "processes": 8
+  },
+  "networkInterfaces": {
+    "eth0": {
+      "mac": "00:16:3e:34:9a:d4",
+      "mtu": 1500,
+      "state": "up",
+      "counters": {
+        "bytesReceived": 46897,
+        "bytesSent": 9910,
+        "packetsReceived": 122,
+        "packetsSent": 46
+      },
+      "addresses": [
+        {
+          "family": "inet",
+          "address": "10.233.0.143",
+          "netmask": "24",
+          "scope": "global"
+        },
+        {
+          "family": "inet6",
+          "address": "fd42:7373:3d88:e37a:216:3eff:fe34:9ad4",
+          "netmask": "64",
+          "scope": "global"
+        },
+        {
+          "family": "inet6",
+          "address": "fe80::216:3eff:fe34:9ad4",
+          "netmask": "64",
+          "scope": "link"
+        }
+      ]
+    }
+  }
+}
+```
+
+When not running:
+```json
+{
+  "running": false,
+  "usage": {
+    "cpu": 0,
+    "disks": {},
+    "memory": 0,
+    "processes": 0
+  },
+  "networkInterfaces": {}
+}
+```
+
 ### POST
 Start the webspace container.
 

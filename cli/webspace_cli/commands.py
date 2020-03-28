@@ -12,7 +12,7 @@ import getpass
 
 import requests
 import requests_unixsocket
-from humanfriendly import format_size
+from humanfriendly import format_size, format_timespan
 from eventfd import EventFD
 
 requests_unixsocket.monkeypatch()
@@ -69,21 +69,6 @@ class process:
         else:
             print()
 
-def find_image(client, id_):
-    image_list = client.req('GET', '/v1/images')
-    # First try to find it by an alias
-    for i in image_list:
-        for a in i['aliases']:
-            if a['name'] == id_:
-                return i
-
-    # Otherwise by fingerprint
-    for i in image_list:
-        if i['fingerprint'] == id_:
-            return i
-
-    return None
-
 class Client:
     def __init__(self, sock, user=None):
         self.base = f'http+unix://{urllib.parse.quote(sock, safe="")}'
@@ -114,6 +99,21 @@ def cmd(f):
         except Exception as ex:
             print('Error: {}'.format(ex), file=sys.stderr)
     return wrapper
+
+def find_image(client, id_):
+    image_list = client.req('GET', '/v1/images')
+    # First try to find it by an alias
+    for i in image_list:
+        for a in i['aliases']:
+            if a['name'] == id_:
+                return i
+
+    # Otherwise by fingerprint
+    for i in image_list:
+        if i['fingerprint'] == id_:
+            return i
+
+    return None
 
 @cmd
 def images(client, _args):
@@ -148,29 +148,36 @@ def init(client, args):
     with process('Creating your container...', done=' success!'):
         client.req('POST', '/v1/webspace', body)
 
-#@cmd
-#def status(client, _args):
-#    info = client.status()
-#    print('Container status: {}'.format(info['status']))
-#    if info['disk']:
-#        print('Disks:')
-#        for name, data in info['disk'].items():
-#            print(' - {}: Used {}'.format(name, format_size(data['usage'], binary=True)))
-#    print('Memory use: {}'.format(format_size(info['memory']['usage'], binary=True)))
-#    print('Running processes: {}'.format(info['processes']))
-#    if info['network'] and not (len(info['network']) == 1 and 'lo' in info['network']):
-#        print('Network interfaces:')
-#        for name, data in info['network'].items():
-#            if name == 'lo':
-#                continue
-#            print(' - {} ({}):'.format(name, data['hwaddr']))
-#            print('   Sent/received: {}/{}'.format(
-#                                                   format_size(data['counters']['bytes_sent'], binary=True),
-#                                                   format_size(data['counters']['bytes_received'], binary=True)))
-#            for addr in data['addresses']:
-#                print('   IPv{} address: {}/{}'.format('6' if addr['family'] == 'inet6' else '4',
-#                                                    addr['address'], addr['netmask']))
-#
+@cmd
+def status(client, _args):
+    info = client.req('GET', '/v1/webspace/state')
+    print(f'Webspace is {"" if info["running"] else "not "}running')
+
+    if info['usage']['disks']:
+        print('Disks:')
+        for name, usage in info['usage']['disks'].items():
+            print(f' - {name}: Used {format_size(usage, binary=True)}')
+
+    if not info["running"]:
+        return
+
+    print(f'CPU time: {format_timespan(info["usage"]["cpu"] / 1000 / 1000 / 1000)}')
+
+    print(f'Memory usage: {format_size(info["usage"]["memory"], binary=True)}')
+
+    print(f'Running processes: {info["usage"]["processes"]}')
+
+    if info['networkInterfaces']:
+        print('Network interfaces:')
+        for name, data in info['networkInterfaces'].items():
+            print(f' - {name} ({data["mac"]}):')
+            print('   Sent/received: {}/{}'.format(
+                format_size(data['counters']['bytesSent'], binary=True),
+                format_size(data['counters']['bytesReceived'], binary=True)))
+            for addr in data['addresses']:
+                print('   IPv{} address: {}/{}'.format('6' if addr['family'] == 'inet6' else '4',
+                    addr['address'], addr['netmask']))
+
 #@cmd
 #def log(client, _args):
 #    print(client.log())
@@ -249,6 +256,11 @@ def init(client, args):
 #@cmd
 #def console(client, _args):
 #    _console(client)
+
+@cmd
+def boot(client, _args):
+    with process('Starting your container...'):
+        client.req('POST', '/v1/webspace/state')
 
 @cmd
 def shutdown(client, _args):

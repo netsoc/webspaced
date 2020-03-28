@@ -9,7 +9,7 @@ def main():
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('-c', '--socket', dest='socket_path',
                         help="Path to the daemon's Unix socket",
-                        default='/run/webspace-ng/unix.socket')
+                        default='/run/webspaced/server.sock')
     parser.add_argument('-u', '--user', help='User to perform operations as (only works if you are webspace admin)')
 
     subparsers = parser.add_subparsers(required=True, dest='command')
@@ -25,8 +25,8 @@ def main():
                         help='Image alias / fingerprint to create your container from')
     p_init.set_defaults(func=init)
 
-    #p_status = subparsers.add_parser('status', help='Show the status of your container')
-    #p_status.set_defaults(func=status)
+    p_status = subparsers.add_parser('status', help='Show the status of your container')
+    p_status.set_defaults(func=status)
 
     #p_log = subparsers.add_parser('log', help="Retrieve your container's system log")
     #p_log.set_defaults(func=log)
@@ -42,6 +42,9 @@ def main():
     #p_exec = subparsers.add_parser('login', help='Shortcut to open a shell in your container \
     #    (logging in with a configured user)')
     #p_exec.set_defaults(func=login)
+
+    p_boot = subparsers.add_parser('boot', help='Start your container')
+    p_boot.set_defaults(func=boot)
 
     p_shutdown = subparsers.add_parser('shutdown', help='Shutdown your container')
     p_shutdown.set_defaults(func=shutdown)

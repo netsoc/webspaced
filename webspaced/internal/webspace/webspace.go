@@ -12,6 +12,7 @@ import (
 	"github.com/cenkalti/backoff/v4"
 	lxdApi "github.com/lxc/lxd/shared/api"
 	"github.com/netsoc/webspace-ng/webspaced/internal/config"
+	log "github.com/sirupsen/logrus"
 )
 
 const lxdConfigKey = "user._webspaced"
@@ -311,12 +312,15 @@ func (w *Webspace) RemovePort(external uint16) error {
 }
 
 // GetIP retrieves the webspace's primary IP address
-func (w *Webspace) GetIP() (string, error) {
+func (w *Webspace) GetIP(state *lxdApi.InstanceState) (string, error) {
 	n := w.InstanceName()
 
-	state, _, err := w.manager.lxd.GetInstanceState(n)
-	if err != nil {
-		return "", fmt.Errorf("failed to get LXD instance state: %w", err)
+	if state == nil {
+		var err error
+		state, _, err = w.manager.lxd.GetInstanceState(n)
+		if err != nil {
+			return "", fmt.Errorf("failed to get LXD instance state: %w", err)
+		}
 	}
 
 	iface, ok := state.Network["eth0"]
@@ -342,14 +346,19 @@ func (w *Webspace) GetIP() (string, error) {
 // AwaitIP attempts to retrieve the webspace's IP with exponential backoff
 func (w *Webspace) AwaitIP() (string, error) {
 	back := backoff.NewExponentialBackOff()
-	back.MaxElapsedTime = 20 * time.Second
+	back.MaxElapsedTime = 10 * time.Second
 
 	var addr string
-	if err := backoff.Retry(func() error {
+	if err := backoff.RetryNotify(func() error {
 		var err error
-		addr, err = w.GetIP()
+		addr, err = w.GetIP(nil)
 		return err
-	}, back); err != nil {
+	}, back, func(_ error, retry time.Duration) {
+		log.WithFields(log.Fields{
+			"user":  w.User,
+			"retry": retry,
+		}).Debug("Failed to get webspace IP")
+	}); err != nil {
 		return "", err
 	}
 
@@ -364,7 +373,7 @@ func (w *Webspace) EnsureStarted() (string, error) {
 	}
 
 	if state.StatusCode == lxdApi.Running {
-		ip, err := w.GetIP()
+		ip, err := w.AwaitIP()
 		if err != nil {
 			return "", fmt.Errorf("failed to get webspace IP: %w", err)
 		}
@@ -377,9 +386,112 @@ func (w *Webspace) EnsureStarted() (string, error) {
 	}
 
 	time.Sleep(time.Duration(w.Config.StartupDelay * float64(time.Second)))
-	ip, err := w.GetIP()
+	ip, err := w.GetIP(nil)
 	if err != nil {
 		return "", fmt.Errorf("failed to get webspace IP: %w", err)
 	}
 	return ip, nil
+}
+
+// InterfaceAddress describes a network interface's address
+type InterfaceAddress struct {
+	Family  string `json:"family"`
+	Address string `json:"address"`
+	Netmask string `json:"netmask"`
+	Scope   string `json:"scope"`
+}
+
+// InterfaceCounters describes a network interface's statistics
+type InterfaceCounters struct {
+	BytesReceived int64 `json:"bytesReceived"`
+	BytesSent     int64 `json:"bytesSent"`
+
+	PacketsReceived int64 `json:"packetsReceived"`
+	PacketsSent     int64 `json:"packetsSent"`
+}
+
+// NetworkInterface describe's a webspace's network interface
+type NetworkInterface struct {
+	MAC   string `json:"mac"`
+	MTU   int    `json:"mtu"`
+	State string `json:"state"`
+
+	Counters  InterfaceCounters  `json:"counters"`
+	Addresses []InterfaceAddress `json:"addresses"`
+}
+
+// Usage describes a webspace's resource usage
+type Usage struct {
+	CPU       int64            `json:"cpu"`
+	Disks     map[string]int64 `json:"disks"`
+	Memory    int64            `json:"memory"`
+	Processes int64            `json:"processes"`
+}
+
+// State describes a webspace's state
+type State struct {
+	Running           bool                        `json:"running"`
+	Usage             Usage                       `json:"usage"`
+	NetworkInterfaces map[string]NetworkInterface `json:"networkInterfaces"`
+}
+
+// State returns information about the webspace's state
+func (w *Webspace) State() (*State, error) {
+	ls, _, err := w.manager.lxd.GetInstanceState(w.InstanceName())
+	if err != nil {
+		return nil, fmt.Errorf("failed to get LXD instance state: %w", err)
+	}
+
+	s := State{
+		Running: ls.StatusCode == lxdApi.Running,
+		Usage: Usage{
+			CPU:       ls.CPU.Usage,
+			Disks:     map[string]int64{},
+			Memory:    ls.Memory.Usage,
+			Processes: ls.Processes,
+		},
+		NetworkInterfaces: map[string]NetworkInterface{},
+	}
+
+	for name, info := range ls.Disk {
+		if info.Usage == -1 {
+			continue
+		}
+
+		s.Usage.Disks[name] = info.Usage
+	}
+
+	if ls.Network != nil {
+		for name, info := range ls.Network {
+			if name == "lo" {
+				continue
+			}
+
+			i := NetworkInterface{
+				MAC:   info.Hwaddr,
+				MTU:   info.Mtu,
+				State: info.State,
+
+				Counters: InterfaceCounters{
+					BytesReceived:   info.Counters.BytesReceived,
+					BytesSent:       info.Counters.BytesSent,
+					PacketsReceived: info.Counters.PacketsReceived,
+					PacketsSent:     info.Counters.PacketsSent,
+				},
+				Addresses: []InterfaceAddress{},
+			}
+			for _, addr := range info.Addresses {
+				i.Addresses = append(i.Addresses, InterfaceAddress{
+					Family:  addr.Family,
+					Address: addr.Address,
+					Netmask: addr.Netmask,
+					Scope:   addr.Scope,
+				})
+			}
+
+			s.NetworkInterfaces[name] = i
+		}
+	}
+
+	return &s, nil
 }

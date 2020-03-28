@@ -153,7 +153,8 @@ func NewServer(config config.Config) *Server {
 	wsOpRouter.HandleFunc("", s.apiGetWebspace).Methods("GET")
 	wsOpRouter.HandleFunc("", s.apiDeleteWebspace).Methods("DELETE")
 
-	wsOpRouter.HandleFunc("/state", s.apiWebspaceState).Methods("POST", "PUT", "DELETE")
+	wsOpRouter.HandleFunc("/state", s.apiGetWebspaceState).Methods("GET")
+	wsOpRouter.HandleFunc("/state", s.apiSetWebspaceState).Methods("POST", "PUT", "DELETE")
 
 	wsOpRouter.HandleFunc("/config", s.apiGetWebspaceConfig).Methods("GET")
 	wsOpRouter.HandleFunc("/config", s.apiUpdateWebspaceConfig).Methods("PATCH")
