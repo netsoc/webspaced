@@ -230,6 +230,34 @@ func (m *Manager) lxdState(name string, action string) error {
 	return nil
 }
 
+// Image represents an LXD image
+type Image struct {
+	Aliases     []lxdApi.ImageAlias `json:"aliases"`
+	Fingerprint string              `json:"fingerprint"`
+	Properties  map[string]string   `json:"properties"`
+	Size        int64               `json:"size"`
+}
+
+// Images gets a list of available images to create webspaces from
+func (m *Manager) Images() ([]Image, error) {
+	lxdImages, err := m.lxd.GetImages()
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve images from LXD: %w", convertLXDError(err))
+	}
+
+	images := make([]Image, len(lxdImages))
+	for i, li := range lxdImages {
+		images[i] = Image{
+			li.Aliases,
+			li.Fingerprint,
+			li.Properties,
+			li.Size,
+		}
+	}
+
+	return images, nil
+}
+
 // Get retrieves a Webspace instance from LXD
 func (m *Manager) Get(user string) (*Webspace, error) {
 	w := &Webspace{
