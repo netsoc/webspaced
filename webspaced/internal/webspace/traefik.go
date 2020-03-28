@@ -86,6 +86,11 @@ func (t *Traefik) ClearConfig(n string) error {
 
 // GenerateConfig generates new Traefik configuration for a webspace
 func (t *Traefik) GenerateConfig(ws *Webspace, addr string) error {
+	if addr == "" && t.config.Traefik.WebspacedSocket == "" {
+		// Traefik hooks (only used when webspaces aren't running) are disabled
+		return nil
+	}
+
 	n := ws.InstanceName()
 
 	rules := make([]string, len(ws.Domains))
@@ -105,7 +110,11 @@ func (t *Traefik) GenerateConfig(ws *Webspace, addr string) error {
 			// Needed so that load balancer mode is engaged
 			pipe.Set(fmt.Sprintf("traefik/http/services/%v/loadbalancer/passhostheader", n), true, 0)
 
-			pipe.Set(fmt.Sprintf("traefik/http/middlewares/%v-boot/webspaceBoot/socket", n), t.config.BindSocket, 0)
+			pipe.Set(
+				fmt.Sprintf("traefik/http/middlewares/%v-boot/webspaceBoot/socket", n),
+				t.config.Traefik.WebspacedSocket,
+				0,
+			)
 			pipe.Set(fmt.Sprintf("traefik/http/middlewares/%v-boot/webspaceBoot/user", n), ws.User, 0)
 			pipe.Set(fmt.Sprintf("traefik/http/routers/%v/middlewares/0", n), n+"-boot", 0)
 		}

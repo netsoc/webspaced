@@ -33,6 +33,7 @@ func init() {
 	viper.SetDefault("traefik.redis.db", 0)
 	viper.SetDefault("traefik.http_entry_point", "http")
 	viper.SetDefault("traefik.https_entry_point", "https")
+	viper.SetDefault("traefik.webspaced_socket", "/run/webspaced/server.sock")
 
 	viper.SetConfigType("yaml")
 	viper.SetConfigName("config")

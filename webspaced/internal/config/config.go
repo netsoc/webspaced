@@ -81,5 +81,6 @@ type Config struct {
 		HTTPSEntryPoint string `mapstructure:"https_entry_point"`
 		CertResolver    string `mapstructure:"cert_resolver"`
 		SANs            []string
+		WebspacedSocket string `mapstructure:"webspaced_socket"`
 	}
 }
