@@ -82,21 +82,21 @@ def main():
     dns_remove.add_argument('domain', help='Domain to remove')
     dns_remove.set_defaults(func=domains_remove)
 
-    #p_pf = subparsers.add_parser('ports', help='Configure forwarded ports')
-    #p_pf.set_defaults(func=ports_show)
-    #pf_sub = p_pf.add_subparsers(dest='ports_command')
+    p_pf = subparsers.add_parser('ports', help='Configure forwarded ports')
+    p_pf.set_defaults(func=ports_show)
+    pf_sub = p_pf.add_subparsers(dest='ports_command')
 
-    #pf_show = pf_sub.add_parser('show', help='Show forwarded ports')
-    #pf_show.set_defaults(function=ports_show)
+    pf_show = pf_sub.add_parser('show', help='Show forwarded ports')
+    pf_show.set_defaults(function=ports_show)
 
-    #pf_add = pf_sub.add_parser('add', help='Forward a port')
-    #pf_add.add_argument('iport', help='Internal port', type=int)
-    #pf_add.add_argument('-p', '--external-port', dest='eport', help='External port (0 means random)', type=int, default=0)
-    #pf_add.set_defaults(func=ports_add)
+    pf_add = pf_sub.add_parser('add', help='Forward a port')
+    pf_add.add_argument('iport', help='Internal port', type=int)
+    pf_add.add_argument('-p', '--external-port', dest='eport', help='External port (0 means random)', type=int, default=0)
+    pf_add.set_defaults(func=ports_add)
 
-    #pf_remove = pf_sub.add_parser('remove', help='Remove a forwarded port')
-    #pf_remove.add_argument('iport', help='Internal port', type=int)
-    #pf_remove.set_defaults(func=ports_remove)
+    pf_remove = pf_sub.add_parser('remove', help='Remove a forwarded port')
+    pf_remove.add_argument('port', help='External port', type=int, nargs=argparse.REMAINDER)
+    pf_remove.set_defaults(func=ports_remove)
 
     args = parser.parse_args()
     args.func(args)

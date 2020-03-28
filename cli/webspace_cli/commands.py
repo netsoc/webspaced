@@ -9,6 +9,7 @@ import select
 import shutil
 import urllib
 import getpass
+import traceback
 
 import requests
 import requests_unixsocket
@@ -74,7 +75,7 @@ class Client:
         self.base = f'http+unix://{urllib.parse.quote(sock, safe="")}'
         self.user = user
 
-    def req(self, method, path, body=None):
+    def req(self, method, path, body=None, plain=False):
         headers = {}
         if self.user:
             headers['X-Webspace-User'] = self.user
@@ -87,6 +88,8 @@ class Client:
                 res.raise_for_status()
 
         if res.status_code != 204:
+            if plain:
+                return res.text
             return res.json()
 
 def cmd(f):
@@ -97,7 +100,7 @@ def cmd(f):
         try:
             return f(client, args)
         except Exception as ex:
-            print('Error: {}'.format(ex), file=sys.stderr)
+            print(f'Error: {ex}', file=sys.stderr)
     return wrapper
 
 def find_image(client, id_):
@@ -304,7 +307,7 @@ def config_set(client, args):
     })
 
 @cmd
-def domains_show(client, args):
+def domains_show(client, _args):
     domains = client.req('GET', '/v1/webspace/domains')
     print('Webspace domains:')
     for domain in domains:
@@ -317,20 +320,24 @@ def domains_add(client, args):
 def domains_remove(client, args):
     client.req('DELETE', f'/v1/webspace/domains/{args.domain}')
 
-#@cmd
-#def ports_show(client, args):
-#    ports = client.get_ports()
-#    print('Webspace ports:')
-#    for iport, eport in ports.items():
-#        print(' - {} -> {}'.format(eport, iport))
-#@cmd
-#def ports_add(client, args):
-#    eport = client.add_port(args.iport, args.eport)
-#    print('Port {} in your webspace is now accessible externally via port {}'.format(args.iport, eport))
-#@cmd
-#def ports_remove(client, args):
-#    client.remove_port(args.iport)
-#
+@cmd
+def ports_show(client, _args):
+    ports = client.req('GET', '/v1/webspace/ports')
+    print('Webspace port forwards:')
+    for e, i in ports.items():
+        print(f' - {e} -> {i}')
+@cmd
+def ports_add(client, args):
+    if args.eport == 0:
+        args.eport = client.req('POST', f'/v1/webspace/ports/{args.iport}')['ePort']
+    else:
+        client.req('POST', f'/v1/webspace/ports/{args.eport}/{args.iport}', plain=True)
+    print(f'Port {args.iport} in your webspace is now accessible externally via port {args.eport}')
+@cmd
+def ports_remove(client, args):
+    for port in args.port:
+        client.req('DELETE', f'/v1/webspace/ports/{port}')
+
 #@cmd
 #def login(client, _args):
 #    config = client.get_config()
