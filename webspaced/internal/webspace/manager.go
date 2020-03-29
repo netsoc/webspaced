@@ -351,9 +351,7 @@ func (m *Manager) Create(user string, image string, password string, sshKey stri
 				cmd = "apk update && apk add dropbear && rc-update add dropbear"
 			case "archlinux":
 				cmd = "pacman -Sy --noconfirm openssh && systemctl enable sshd"
-			case "ubuntu":
-				cmd = "true"
-			case "debian":
+			case "ubuntu", "debian":
 				cmd = "apt-get -qy update && apt-get -qy install openssh-server"
 			case "fedora", "centos":
 				cmd = "dnf install -qy openssh-server && systemctl enable sshd"
