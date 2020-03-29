@@ -47,7 +47,7 @@ void handle_req(req_t *r) {
     uint8_t req_type = data[0];
     if (req_type == REQ_GETPWUID) {
         if (n != 5) {
-            fprintf(stderr, "ignoring getpwuid request with invalid length %zd from \"%s\"\n", read, r->src.sun_path);
+            fprintf(stderr, "ignoring getpwuid request with invalid length %zd from \"%s\"\n", n, r->src.sun_path);
             return;
         }
 

@@ -347,7 +347,7 @@ func (m *Manager) Create(user string, image string, password string, sshKey stri
 			var cmd string
 			switch os {
 			case "Alpine":
-				cmd = "sapk update && apk add dropbear && rc-update add dropbear"
+				cmd = "apk update && apk add dropbear && rc-update add dropbear"
 			case "Archlinux":
 				cmd = "pacman -Sy --noconfirm openssh && systemctl enable sshd"
 			case "ubuntu":
