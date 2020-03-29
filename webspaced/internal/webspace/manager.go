@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"strings"
 
 	lxd "github.com/lxc/lxd/client"
 	lxdApi "github.com/lxc/lxd/shared/api"
@@ -345,16 +346,16 @@ func (m *Manager) Create(user string, image string, password string, sshKey stri
 
 		if os, ok := img.Properties["os"]; ok {
 			var cmd string
-			switch os {
-			case "Alpine":
+			switch strings.ToLower(os) {
+			case "alpine":
 				cmd = "apk update && apk add dropbear && rc-update add dropbear"
-			case "Archlinux":
+			case "archlinux":
 				cmd = "pacman -Sy --noconfirm openssh && systemctl enable sshd"
 			case "ubuntu":
 				cmd = "true"
-			case "Debian":
+			case "debian":
 				cmd = "apt-get -qy update && apt-get -qy install openssh-server"
-			case "Fedora", "Centos":
+			case "fedora", "centos":
 				cmd = "dnf install -qy openssh-server && systemctl enable sshd"
 			default:
 				log.WithField("os", os).Warn("Unknown OS, unable to install sshd")
