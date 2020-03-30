@@ -165,37 +165,45 @@ input[type=text] {
     left: 0;
     background-color: #fff; 
     overflow-x: hidden; 
-    padding-top: 250px;
+    text-align: center;
+    border-right: 1px solid #eee;
+    box-shadow: 10px 0px 8px #eee;
   }
   
   /* The navigation menu links */
   .sidenav a {
     padding: 6px 8px 6px 16px;
     text-decoration: none;
-    font-size: 25px;
+    font-size: 1rem;
     color: #818181;
     display: flex;
     justify-content: center;
     line-height: 50px;
     align-items: center;
     text-align: center;
-    vertical-align: center;
-    line-height: 90px; 
+  }
+
+  .links {
+    margin: 0;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
   }
 
   .sidenav i {
     text-decoration: none;
-    color: #818181;
     display: flex;
     justify-content: center;
     align-items: center;
     text-align: center;
     vertical-align: center;
+    margin-right: 10px;
   }
   
   /* When you mouse over the navigation links, change their color */
   .sidenav a:hover {
-    color: #f1f1f1;
+    color: #444;
   }
   
   /* Style page content */

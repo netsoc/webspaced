@@ -11,9 +11,18 @@ Vue.component('NotFound', {
 Vue.component('HomeView', {
     template: `
     <div>
-      <h1>Home</h1>
-      <p class="lead">Hello, world!</p>
-    </div>
+    <img class="center" id="login-logo" src="/static/images/netsoc.png" alt="Netsoc Logo" style="width:95px;height:95px;"> 
+      <h1 style = "text-align: center"> Netsoc Webspaces </h1> 
+      <br>
+      <br>
+      <h5 style= "text-align: center">Netsoc's webspaces provide a container for every member to set up their own website.</h5>
+      <br>
+      <br>
+      <a class="button center" href="/login"> Get Started </a>
+      <div class="bottom-left-corner">
+        <p>Made by DU Netsoc</p>
+      </div>
+    <div>
   `
 });
 
@@ -21,18 +30,20 @@ Vue.component('Navbar', {
     template: `
     <div>
       <div class="sidenav">
-        <i class="fa fa-home fa-lg"> <a href="/dashboard"> Dashboard </a></i>
-        <i class="fa fa-terminal fa-lg"> <a href="/terminal"> Terminal </a></i>
-        <i class="fa fa-cog fa-lg"> <a href="/configs"> Configs </a></i>
-        <i class="fa fa-globe fa-lg"> <a href="/domains"> Domains </a></i>
-        <i class="fa fa-plug fa-lg"> <a href="/ports"> Ports </a></i>
+        <div class="links">
+          <a href="/dashboard"><i class="fa fa-home fa-lg" />  Dashboard </a>
+          <a href="/terminal"><i class="fa fa-terminal fa-lg" />  Terminal </a>
+          <a href="/configs"><i class="fa fa-cog fa-lg" />  Configs </a>
+          <a href="/domains"><i class="fa fa-globe fa-lg" />  Domains </a>
+          <a href="/ports"><i class="fa fa-plug fa-lg" />  Ports </a>
+        </div>
       </div>
     </div>
   `
 });
 
 Vue.component('Graph', {
-  template: `
+    template: `
     <body>
       <div class="container">
         <canvas id ="myChart></canvas>
@@ -42,83 +53,83 @@ Vue.component('Graph', {
 });
 
 Vue.component('Dashboard', {
-  template:` 
-  <div>
-    <navbar></navbar>
-    <img src="/static/images/Arch.png" alt="Arch Logo">
-    <h2> Installed OS </h2>
-    <h2 class = "graph"> CPU Usage </h2>
-    <div class ="graph" id="my_dataviz"></div>
-    <br>
-    <a class="button center" href="#"> Shut Down </a>
-    <a class="button center" href="#"> Restart </a>
-    <br>
-  </div>  
+    template: ` 
+    <div class="main">
+      <p> Dashboard </p>
+      <navbar></navbar>
+      <img src="/static/images/Arch.png" alt="Arch Logo">
+      <h2> Installed OS </h2>
+      <h2 class = "graph"> CPU Usage </h2>
+      <div class ="graph" id="my_dataviz"></div>
+      <br>
+      <a class="button center" href="#"> Shut Down </a>
+      <a class="button center" href="#"> Restart </a>
+      <br>
+    </div>  
   `,
-  mounted() {
-    // set the dimensions and margins of the graph
-    var width = 450
-    height = 450
-    margin = 40
+    mounted() {
+        // set the dimensions and margins of the graph
+        var width = 450
+        height = 450
+        margin = 40
 
-    // The radius of the pieplot is half the width or half the height (smallest one). I subtract a bit of margin.
-    var radius = Math.min(width, height) / 2 - margin
+        // The radius of the pieplot is half the width or half the height (smallest one). I subtract a bit of margin.
+        var radius = Math.min(width, height) / 2 - margin
 
-    // append the svg object to the div called 'my_dataviz'
-    var svg = d3.select("#my_dataviz")
-    .append("svg")
-    .attr("width", width)
-    .attr("height", height)
-    .append("g")
-    .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");
+        // append the svg object to the div called 'my_dataviz'
+        var svg = d3.select("#my_dataviz")
+            .append("svg")
+            .attr("width", width)
+            .attr("height", height)
+            .append("g")
+            .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");
+          // Create dummy data
+          var data = {a: 60, b: 40}
 
-    // Create dummy data
-    var data = {a: 60, b: 40}
+              // set the color scale
+              var color = d3.scaleOrdinal()
+                  .domain(data)
+                  .range(["#98abc5", "#8a89a6", "#7b6888", "#6b486b", "#a05d56"])
 
-    // set the color scale
-    var color = d3.scaleOrdinal()
-    .domain(data)
-    .range(["#98abc5", "#8a89a6", "#7b6888", "#6b486b", "#a05d56"])
+              // Compute the position of each group on the pie:
+              var pie = d3.pie()
+                  .value(function(d) { return d.value; })
+              var data_ready = pie(d3.entries(data))
 
-    // Compute the position of each group on the pie:
-    var pie = d3.pie()
-    .value(function(d) {return d.value; })
-    var data_ready = pie(d3.entries(data))
-
-    // Build the pie chart: Basically, each part of the pie is a path that we build using the arc function.
-    svg
-    .selectAll('whatever')
-    .data(data_ready)
-    .enter()
-    .append('path')
-    .attr('d', d3.arc()
-    .innerRadius(100)         // This is the size of the donut hole
-    .outerRadius(radius)
-    )
-    .attr('fill', function(d){ return(color(d.data.key)) })
-    .attr("stroke", "black")
-    .style("stroke-width", "2px")
-    .style("opacity", 0.7)
-  }
-});
+              // Build the pie chart: Basically, each part of the pie is a path that we build using the arc function.
+              svg
+                  .selectAll('whatever')
+                  .data(data_ready)
+                  .enter()
+                  .append('path')
+                  .attr('d', d3.arc()
+                      .innerRadius(100) // This is the size of the donut hole
+                      .outerRadius(radius)
+                  )
+                  .attr('fill', function(d) { return (color(d.data.key)) })
+                  .attr("stroke", "black")
+                  .style("stroke-width", "2px")
+                  .style("opacity", 0.7)
+          }
+      });
 
 Vue.component('Terminal', {
-  template:` 
-  <div>
+    template: ` 
+  <div class="main">
     <navbar></navbar>
     <div id="terminal"></div>
   </div>
   `,
-  mounted(){
-    var term = new Terminal();
+    mounted() {
+        var term = new Terminal();
         term.open(document.getElementById('terminal'));
         term.write('Hello from \x1B[1;3;31mxterm.js\x1B[0m $ ')
-  }
+    }
 });
 
 Vue.component('Configs', {
-  template:` 
-  <div>
+    template: ` 
+  <div class="main">
     <div>
       <h2>HTTP/HTTPS Ports</h2>
       <input type="text" placeholder="HTTP Port">
@@ -140,8 +151,8 @@ Vue.component('Configs', {
 });
 
 Vue.component('Domains', {
-  template:` 
-  <div>
+    template: ` 
+  <div class="main">
     <h2>Domains</h2>
     <input type="text" placeholder="Domains">
     <navbar></navbar>
@@ -150,8 +161,8 @@ Vue.component('Domains', {
 });
 
 Vue.component('Ports', {
-  template:` 
-  <div>
+    template: ` 
+  <div class="main">
     <h2>External Ports</h2>
     <input type="text" placeholder="External Port">
     <br>
