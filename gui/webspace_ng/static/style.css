@@ -273,3 +273,13 @@ input[type=text] {
   .slider.round:before {
     border-radius: 50%;
   }
+
+  .graph {
+    display: flex;
+    justify-content: center;
+  }
+
+  .os {
+    display: flex;
+    justify-content: right;
+  }

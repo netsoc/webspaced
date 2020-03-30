@@ -44,9 +44,15 @@ Vue.component('Graph', {
 Vue.component('Dashboard', {
   template:` 
   <div>
-    <p> Dashboard </p>
     <navbar></navbar>
-    <div id="my_dataviz"></div>
+    <img src="/static/images/Arch.png" alt="Arch Logo">
+    <h2> Installed OS </h2>
+    <h2 class = "graph"> CPU Usage </h2>
+    <div class ="graph" id="my_dataviz"></div>
+    <br>
+    <a class="button center" href="#"> Shut Down </a>
+    <a class="button center" href="#"> Restart </a>
+    <br>
   </div>  
   `,
   mounted() {
@@ -67,7 +73,7 @@ Vue.component('Dashboard', {
     .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");
 
     // Create dummy data
-    var data = {a: 9, b: 20, c:30, d:8, e:12}
+    var data = {a: 60, b: 40}
 
     // set the color scale
     var color = d3.scaleOrdinal()
@@ -100,7 +106,6 @@ Vue.component('Terminal', {
   template:` 
   <div>
     <navbar></navbar>
-    <link rel="stylesheet" href="node_modules/xterm/css/xterm.css" />
     <div id="terminal"></div>
   </div>
   `,
