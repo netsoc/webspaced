@@ -151,6 +151,16 @@ input[type=text] {
     border-radius: 4px;
 }
 
+.rootpassword{
+  border: none;
+  width: 446px;
+  height: 34px;
+  padding: 15px 22px;
+  margin: 10px 5px;
+  background: rgba(196, 196, 196, 0.25);
+  border-radius: 4px;
+}
+
 
 /* SIDEBAR */
 
@@ -290,4 +300,8 @@ input[type=text] {
   .os {
     display: flex;
     justify-content: right;
+  }
+
+  ul {
+    list-style-type: none;
   }

@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html>
-<<<<<<< HEAD
     <head>
         <meta charset="utf-8" />
         <title>webspace-ng</title>
@@ -8,42 +7,28 @@
             integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh"
             crossorigin="anonymous">
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
-        <link rel="stylesheet" href="node_modules/xterm/css/xterm.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/xterm/3.14.5/xterm.css" />
         <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     </head>
   <body>
-=======
+        <div id="app">
+            <nav class="navbar navbar-expand-md fixed-top">
+                <router-link class="navbar-brand" to="/"></router-link>
+                <div class="navbar-nav main-nav">
+                </div>
+            </nav>
+            <main role="main" class="container">
+                <router-view></router-view>
+            </main>
+        </div>
 
-<head>
-    <meta charset="utf-8" />
-    <title>webspace-ng</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-
-<body>
->>>>>>> e1c0fc8be61a48751128eb80744fa95e1bd8b723
-    <div id="app">
-        <nav class="navbar navbar-expand-md fixed-top">
-            <router-link class="navbar-brand" to="/"></router-link>
-            <div class="navbar-nav main-nav">
-                <router-link class="nav-item nav-link main-nav" active-class="active" to="/login">Login</router-link>
-            </div>
-        </nav>
-        <main role="main" class="container">
-            <router-view></router-view>
-        </main>
-    </div>
-
-    <!-- JavaScript dependencies -->
-    <script src="{% if config['DEBUG'] %}https://cdn.jsdelivr.net/npm/vue/dist/vue.js{% else %}https://cdn.jsdelivr.net/npm/vue@2.6.11{% endif %}">
-    </script>
-    <script src="https://cdn.jsdelivr.net/npm/vue-router@3.1.5"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xterm/3.14.5/xterm.js"></script>
-    <script src="https://d3js.org/d3.v5.min.js"></script>
-    <script src="{{ url_for('static', filename='views.js') }}"></script>
-    <script src="{{ url_for('static', filename='main.js') }}"></script>
-</body>
-
+        <!-- JavaScript dependencies -->
+        <script src="{% if config['DEBUG'] %}https://cdn.jsdelivr.net/npm/vue/dist/vue.js{% else %}https://cdn.jsdelivr.net/npm/vue@2.6.11{% endif %}">
+        </script>
+        <script src="https://cdn.jsdelivr.net/npm/vue-router@3.1.5"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/xterm/3.14.5/xterm.js"></script>
+        <script src="https://d3js.org/d3.v5.min.js"></script>
+        <script src="{{ url_for('static', filename='views.js') }}"></script>
+        <script src="{{ url_for('static', filename='main.js') }}"></script>
+    </body>
 </html>

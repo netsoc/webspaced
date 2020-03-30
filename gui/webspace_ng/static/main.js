@@ -34,11 +34,11 @@ const router = new VueRouter({
         },
         {
             path: '/choose-os',
-            component: Vue.component('Operating System')
+            component: Vue.component('OperatingSystem')
         },
         {
             path: '/create-root',
-            component: Vue.component('Create Root PW')
+            component: Vue.component('CreateRootPW')
         },
         {
             path: '/congrats',
@@ -55,3 +55,5 @@ const vm = new Vue({
     el: '#app',
     router,
 });
+
+Vue.config.delimiters = ["${", "}"];

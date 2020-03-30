@@ -11,7 +11,7 @@ Vue.component('NotFound', {
 Vue.component('HomeView', {
     template: `
     <div>
-    <img class="center" id="login-logo" src="/static/images/netsoc.png" alt="Netsoc Logo" style="width:95px;height:95px;"> 
+      <img class="center" id="login-logo" src="/static/images/netsoc.png" alt="Netsoc Logo" style="width:95px;height:95px;"> 
       <h1 style = "text-align: center"> Netsoc Webspaces </h1> 
       <br>
       <br>
@@ -22,7 +22,7 @@ Vue.component('HomeView', {
       <div class="bottom-left-corner">
         <p>Made by DU Netsoc</p>
       </div>
-    <div>
+    </div>
   `
 });
 
@@ -55,11 +55,11 @@ Vue.component('Graph', {
 Vue.component('Dashboard', {
     template: ` 
     <div class="main">
-      <p> Dashboard </p>
       <navbar></navbar>
       <img src="/static/images/Arch.png" alt="Arch Logo">
       <h2> Installed OS </h2>
       <h2 class = "graph"> CPU Usage </h2>
+      <h3 class = "graph"> 2457 mb / 4096 mb  </h3>
       <div class ="graph" id="my_dataviz"></div>
       <br>
       <a class="button center" href="#"> Shut Down </a>
@@ -89,7 +89,7 @@ Vue.component('Dashboard', {
               // set the color scale
               var color = d3.scaleOrdinal()
                   .domain(data)
-                  .range(["#98abc5", "#8a89a6", "#7b6888", "#6b486b", "#a05d56"])
+                  .range(["#98abc5", "#f2f2f2", "#7b6888", "#6b486b", "#a05d56"])
 
               // Compute the position of each group on the pie:
               var pie = d3.pie()
@@ -123,7 +123,25 @@ Vue.component('Terminal', {
     mounted() {
         var term = new Terminal();
         term.open(document.getElementById('terminal'));
-        term.write('Hello from \x1B[1;3;31mxterm.js\x1B[0m $ ')
+        term.write('Hello from \x1B[1;3;31mnetsoc terminal\x1B[0m $ ')
+          if (term._initialized) {
+              return;
+          }
+          term._initialized = true;
+          term.writeln('This is a local terminal emulation');
+          term.writeln('Type some keys and commands to play around.');
+          term.onKey(e => {
+              const printable = !e.domEvent.altKey && !e.domEvent.altGraphKey && !e.domEvent.ctrlKey && !e.domEvent.metaKey;
+              if (e.domEvent.keyCode === 13) {
+                term.write('\r\n$ ');
+              } else if (e.domEvent.keyCode === 8) {
+                  if (term._core.buffer.x > 2) {
+                      term.write('\b \b');
+                  }
+              } else if (printable) {
+                  term.write(e.key);
+              }
+          });
     }
 });
 
@@ -154,10 +172,22 @@ Vue.component('Domains', {
     template: ` 
   <div class="main">
     <h2>Domains</h2>
-    <input type="text" placeholder="Domains">
+    <ul id="domains">
+      <li id="element1"> <input type="text" placeholder="Domains"> </li>
+    </ul>
+    <div class="btn button"  v-on:click="greet" > Add More Domains </div>
     <navbar></navbar>
   </div>
-`
+  `,
+  methods: {
+    greet: function (event) {
+      // `this` inside methods point to the Vue instance
+      alert('Hello ' + this.name + '!')
+      // `event` is the native DOM event
+      alert(event.target.tagName)
+    }
+  }
+  
 });
 
 Vue.component('Ports', {
@@ -179,7 +209,7 @@ Vue.component('Ports', {
 });
 
 
-Vue.component('Operating System', {
+Vue.component('OperatingSystem', {
     template: `
     <div class = "container">
       <div class = "row">
@@ -201,12 +231,10 @@ Vue.component('Operating System', {
 
 Vue.component('Login', {
     template: `
-    <template>
       <div class ="center">
         <img class="center" id="login-logo" src="/static/images/logo.png" alt="Netsoc Logo">
-        <form @submit.prevent="handleSubmit">
             <div class="form-group login-box center">
-                <input type="text" name="username" class="form-control" placeholder="Username" style="border:none; background-color:#fff;"/>
+                <input type="text" name="email" class="form-control" placeholder="Email" style="border:none; background-color:#fff;"/>
             </div>
             <div class="form-group login-box center">
                 <input type="password" name="password" class="form-control" placeholder="Password" style="border:none"/>
@@ -239,7 +267,7 @@ Vue.component('Welcome', {
   `
 });
 
-Vue.component('Operating System', {
+Vue.component('OperatingSystem', {
     template: `
   <div>
   <h1 style="text-align: center;">Choose your Operating System</h1>
@@ -291,13 +319,13 @@ Vue.component('Operating System', {
   `
 });
 
-Vue.component('Create Root PW', {
+Vue.component('CreateRootPW', {
     template: `
   <div>
     <h1>Create your Root Password</h1>
-    <input type="text" placeholder="Enter Password">
+    <input type="password" class="rootpassword" placeholder="Enter Password">
     <br>
-    <input type="text" placeholder="Re-enter Password">
+    <input type="password" class="rootpassword" placeholder="Re-enter Password">
     <br>
     <h1 style="margin-top: 50px;">Create an SSH Key (Optional)</h1>
     <textarea></textarea>
