@@ -13,16 +13,32 @@ const router = new VueRouter({
             component: Vue.component('Dashboard')
         },
         {
+            path: '/Terminal',
+            component: Vue.component('Terminal')
+        },
+        {
+            path: '/configs',
+            component: Vue.component('Configs')
+        },
+        {
+            path: '/domains',
+            component: Vue.component('Domains')
+        },
+        {
+            path: '/ports',
+            component: Vue.component('Ports')
+        },
+        {
             path: '/welcome',
             component: Vue.component('Welcome')
         },
         {
             path: '/choose-os',
-            component: Vue.component('Operating System')
+            component: Vue.component('OperatingSystem')
         },
         {
             path: '/create-root',
-            component: Vue.component('Create Root PW')
+            component: Vue.component('CreateRootPW')
         },
         {
             path: '/congrats',
@@ -39,3 +55,5 @@ const vm = new Vue({
     el: '#app',
     router,
 });
+
+Vue.config.delimiters = ["${", "}"];

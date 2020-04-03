@@ -151,51 +151,69 @@ input[type=text] {
     border-radius: 4px;
 }
 
+.rootpassword{
+  border: none;
+  width: 446px;
+  height: 34px;
+  padding: 15px 22px;
+  margin: 10px 5px;
+  background: rgba(196, 196, 196, 0.25);
+  border-radius: 4px;
+}
+
 
 /* SIDEBAR */
 
 /* The navigation menu links */
 
-.sidenav a {
+.sidenav {
     height: 100%; 
     width: 180px; /* Set the width of the sidebar */
     position: fixed; /* Fixed Sidebar (stay in place on scroll) */
     z-index: 1; /* Stay on top */
     top: 0; 
     left: 0;
-    background-color: #343a40; 
+    background-color: #fff; 
     overflow-x: hidden; 
-    padding-top: 250px;
+    text-align: center;
+    border-right: 1px solid #eee;
+    box-shadow: 10px 0px 8px #eee;
   }
   
   /* The navigation menu links */
   .sidenav a {
     padding: 6px 8px 6px 16px;
     text-decoration: none;
-    font-size: 25px;
+    font-size: 1rem;
     color: #818181;
     display: flex;
     justify-content: center;
     line-height: 50px;
     align-items: center;
     text-align: center;
-    vertical-align: center;
-    line-height: 90px; 
+  }
+
+  .links {
+    margin: 0;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
   }
 
   .sidenav i {
     text-decoration: none;
-    color: #818181;
     display: flex;
     justify-content: center;
     align-items: center;
     text-align: center;
     vertical-align: center;
+    margin-right: 10px;
   }
   
   /* When you mouse over the navigation links, change their color */
   .sidenav a:hover {
-    color: #f1f1f1;
+    color: #444;
   }
   
   /* Style page content */
@@ -209,4 +227,81 @@ input[type=text] {
   @media screen and (max-height: 450px) {
     .sidenav {padding-top: 15px;}
     .sidenav a {font-size: 18px;}
+  }
+
+  /* The switch - the box around the slider */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+  }
+  
+  /* Hide default HTML checkbox */
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+  
+  /* The slider */
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    -webkit-transition: .4s;
+    transition: .4s;
+  }
+  
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    -webkit-transition: .4s;
+    transition: .4s;
+  }
+  
+  input:checked + .slider {
+    background-color: #2196F3;
+  }
+  
+  input:focus + .slider {
+    box-shadow: 0 0 1px #2196F3;
+  }
+  
+  input:checked + .slider:before {
+    -webkit-transform: translateX(26px);
+    -ms-transform: translateX(26px);
+    transform: translateX(26px);
+  }
+  
+  /* Rounded sliders */
+  .slider.round {
+    border-radius: 34px;
+  }
+  
+  .slider.round:before {
+    border-radius: 50%;
+  }
+
+  .graph {
+    display: flex;
+    justify-content: center;
+  }
+
+  .os {
+    display: flex;
+    justify-content: right;
+  }
+
+  ul {
+    list-style-type: none;
   }
