@@ -27,3 +27,10 @@ def login():
 	# state should be 2 if success and user has already created webspace
 	# state should be 0 if the login was a failure
 	return jsonify({'state': 1})
+
+@app.route('/api/domains', methods=['GET', 'POST'])
+def submitDomain():
+	attempt = request.get_json()
+	domain = attempt['toSubmit']['domain']
+	print(domain)
+	return jsonify({'result': True, 'domain': domain})

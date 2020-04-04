@@ -173,18 +173,38 @@ Vue.component('Domains', {
   <div class="main">
     <h2>Domains</h2>
     <ul id="domains">
-      <li id="element1"> <input type="text" placeholder="Domains"> </li>
+      <li id="element1"> <input v-model="domain" type="text" placeholder="Domains"> </li>
     </ul>
-    <div class="btn button"  v-on:click="greet" > Add More Domains </div>
+    <div class="btn button" v-on:click="submit" > Add More Domains </div>
     <navbar></navbar>
   </div>
   `,
+  data: function() {
+    return{
+      domain: ""
+    }
+  },
   methods: {
-    greet: function (event) {
-      // `this` inside methods point to the Vue instance
-      alert('Hello ' + this.name + '!')
-      // `event` is the native DOM event
-      alert(event.target.tagName)
+    submit: function() {
+      var toSubmit = {"domain": this.domain}
+      $.ajax({
+          type: "POST",
+          contentType: "application/json;charset=utf-8",
+          url: "/api/domains",
+          traditional: "true",
+          data: JSON.stringify({toSubmit}),
+          dataType: "json",
+          success: function(response) {
+            if(response.result == true) {
+              alert(response.domain + " successfully added")
+            } else {
+              alert("Error adding this domain")
+            }
+          },
+          error: function(error) {
+            console.error(error)
+          }
+        })
     }
   }
   
@@ -252,8 +272,7 @@ Vue.component('Login', {
     data: function() {
       return {  
         email: "",
-        password: "",
-        error: ""
+        password: ""
       }
     },
     methods: {
@@ -269,10 +288,11 @@ Vue.component('Login', {
           success: function(response) {
             if(response.state == 1) {
               alert("Got 1 back")
+              this.error = ""
             } else if(response.state == 2) {
               alert("Got 2 back")
             } else {
-              alert("Got something else back")
+              alert("Email/Password incorrect")
             }
           },
           error: function(error) {
