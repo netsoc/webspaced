@@ -234,20 +234,53 @@ Vue.component('Login', {
       <div class ="center">
         <img class="center" id="login-logo" src="/static/images/logo.png" alt="Netsoc Logo">
             <div class="form-group login-box center">
-                <input type="text" name="email" class="form-control" placeholder="Email" style="border:none; background-color:#fff;"/>
+                <input type="text" v-model="email" name="email" class="form-control" placeholder="Email" style="border:none; background-color:#fff;"/>
             </div>
             <div class="form-group login-box center">
-                <input type="password" name="password" class="form-control" placeholder="Password" style="border:none"/>
+                <input type="password" v-model="password" name="password" class="form-control" placeholder="Password" style="border:none"/>
+                <p>{{ error }}</p>
             </div>
         </form>
         <div class="bottom-right-corner">
-          <a href= "/welcome" class="button center"> Login </a>
+          <a v-on:click="submit" class="button center"> Login </a>
         </div>
         <div class="bottom-left-corner">
           <p>Made by DU Netsoc</p>
         </div>
       </div>
-    `
+    `,
+    data: function() {
+      return {  
+        email: "",
+        password: "",
+        error: ""
+      }
+    },
+    methods: {
+      submit: function() {
+        var details = {"email": this.email, "password": this.password}
+        $.ajax({
+          type: "POST",
+          contentType: "application/json;charset=utf-8",
+          url: "/api/login",
+          traditional: "true",
+          data: JSON.stringify({details}),
+          dataType: "json",
+          success: function(response) {
+            if(response.state == 1) {
+              alert("Got 1 back")
+            } else if(response.state == 2) {
+              alert("Got 2 back")
+            } else {
+              alert("Got something else back")
+            }
+          },
+          error: function(error) {
+            console.error(error)
+          }
+        })
+      }
+    }
 });
 
 Vue.component('Welcome', {
