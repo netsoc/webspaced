@@ -28,9 +28,18 @@ def login():
 	# state should be 0 if the login was a failure
 	return jsonify({'state': 1})
 
+@app.route('/api/getDomains', methods=['GET', 'POST'])
+def getDomains():
+	#TO DO: get current domains from API
+	domains = ['www.example.com', 'www.google.com']
+
+	return jsonify({'domains': domains})
+
 @app.route('/api/domains', methods=['GET', 'POST'])
 def submitDomain():
 	attempt = request.get_json()
 	domain = attempt['toSubmit']['domain']
-	print(domain)
+
+	#TO DO: add domain to the webspace using API
+	
 	return jsonify({'result': True, 'domain': domain})

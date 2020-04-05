@@ -175,16 +175,33 @@ Vue.component('Domains', {
     <ul id="domains">
       <li id="element1"> <input v-model="domain" type="text" placeholder="Domains"> </li>
     </ul>
-    <div class="btn button" v-on:click="submit" > Add More Domains </div>
+    <div class="btn button" v-on:click="submit" > Add Domain </div>
+    <div>
+      <h5 style="margin: 20px 0 10px 0; color: grey">Current Domains:</h5>
+      <p style="color: grey" v-for="domain in domains">{{ domain }}</p>
+    </div>
     <navbar></navbar>
   </div>
   `,
   data: function() {
     return{
-      domain: ""
+      domain: "",
+      domains: [""]
     }
   },
+  mounted() {
+    axios.get('/api/getDomains')
+      .then(response => {
+        this.domains = response.data.domains
+      })
+      .catch(error => {
+        console.log(error)
+      })
+  },
   methods: {
+    test: function() {
+      alert(this.domains)
+    },
     submit: function() {
       var toSubmit = {"domain": this.domain}
       $.ajax({
