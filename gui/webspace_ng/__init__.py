@@ -15,31 +15,59 @@ app.config['SECRET_KEY'] = SECRET_KEY
 def catch_all(path):
 	return render_template('index.html')
 
+# Get log in details from the log in screen
 @app.route('/api/login', methods=['GET','POST'])
 def login():
 	attempt = request.get_json()
 	email = attempt['details']['email']
 	password = attempt['details']['password']
 
-	#TO DO: validate the user using Netsoc LDAP
+	#TO DO: use Netsoc LDAP to validate user details 
 
 	# state should be 1 if success and user needs to create webspace
 	# state should be 2 if success and user has already created webspace
 	# state should be 0 if the login was a failure
 	return jsonify({'state': 1})
 
+# Return the domains that a webspace is using
 @app.route('/api/getDomains', methods=['GET', 'POST'])
 def getDomains():
-	#TO DO: get current domains from API
+
+	#TO DO: use API to get current domains
+
 	domains = ['www.example.com', 'www.google.com']
 
 	return jsonify({'domains': domains})
 
+# Get submission of domains from user
 @app.route('/api/domains', methods=['GET', 'POST'])
 def submitDomain():
 	attempt = request.get_json()
 	domain = attempt['toSubmit']['domain']
 
-	#TO DO: add domain to the webspace using API
+	#TO DO: use domain to add domain to the webspace
 	
 	return jsonify({'result': True, 'domain': domain})
+
+# Return the configurations that a webspace has
+@app.route('/api/getConfigs', methods=['GET', 'POST'])
+def getConfigs():
+
+	#TO DO: use API to get current configurations that webspace has
+
+	configs = {'HTTP': 8080, 'HTTPS': 8080, 'SSL': True, 'Startup': 1} #temp
+
+	return jsonify(configs)
+
+# Get submission of configurations from user
+@app.route('/api/submitConfigs', methods=['GET', 'POST'])
+def submitConfigs():
+	configs = request.get_json()
+	HTTP = configs['configs']['HTTP']
+	HTTPS = configs['configs']['HTTPS']
+	Startup = configs['configs']['Startup']
+	SSL = configs['configs']['SSL']
+
+	#TO DO: use API to configure webspace
+
+	return jsonify({'state': True})

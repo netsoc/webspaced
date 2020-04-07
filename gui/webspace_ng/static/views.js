@@ -150,22 +150,77 @@ Vue.component('Configs', {
   <div class="main">
     <div>
       <h2>HTTP/HTTPS Ports</h2>
-      <input type="text" placeholder="HTTP Port">
+      <input v-model="HTTP" type="text" placeholder="HTTP Port">
       <br>
-      <input type="text" placeholder="HTTPs Port">
+      <input v-model="HTTPS" type="text" placeholder="HTTPs Port">
       <br>
       <h2>Startup Delay (Seconds)</h2>
-      <input type="text" placeholder="Delay">
+      <input v-model="Startup" type="text" placeholder="Delay">
       <br>
       <h2> Enable SSL Termination </h2>
       <label class="switch">
-        <input type="checkbox">
+        <input v-model="SSL" type="checkbox">
         <span class="slider round"></span>
       </label>
+      <div class="btn button bottom-right-corner" v-on:click="submit"> Submit Configs </div>
+      <div>
+        <h5 style="margin: 20px 0 20px 0;color:grey">Current configurations:</h5>
+        <p style="color: grey">HTTP: {{ currentHTTP }}   
+          HTTPS: {{ currentHTTPS }}   
+          Startup Delay: {{ currentStartup }}s   
+          SSL Termination: {{ currentSSL }}</p>
+      </div>
     </div> 
     <navbar></navbar>
   </div>
-`
+`,
+data: function() {
+  return {
+    HTTP: "",
+    HTTPS: "",
+    Startup: "",
+    SSL: "",
+    currentHTTP: "",
+    currentHTTPS: "",
+    currentStartup: "",
+    currentSSL: ""
+  }
+},
+mounted() {
+  axios.get('/api/getConfigs')
+    .then(response => {
+      this.currentHTTP = response.data.HTTP
+      this.currentHTTPS = response.data.HTTPS
+      this.currentStartup = response.data.Startup
+      this.currentSSL = response.data.SSL
+    })
+    .catch(error => {
+      console.log(error)
+    })
+},
+methods: {
+  submit: function() {
+    var configs = {"HTTP": this.HTTP, "HTTPS": this.HTTPS, "Startup": this.Startup, "SSL": this.SSL}
+    $.ajax({
+      type: "POST",
+      contentType: "application/json;charset=utf-8",
+      url: "/api/submitConfigs",
+      traditional: "true",
+      data: JSON.stringify({configs}),
+      dataType: "json",
+      success: function(response) {
+        if(response.state == true) {
+          alert("Submitted configs successfully")
+        } else {
+          alert("Didn't work")
+        }
+      },
+      error: function(error) {
+        console.log(error)
+      }
+    })
+  } 
+}
 });
 
 Vue.component('Domains', {
@@ -184,7 +239,7 @@ Vue.component('Domains', {
   </div>
   `,
   data: function() {
-    return{
+    return {
       domain: "",
       domains: [""]
     }
@@ -199,9 +254,6 @@ Vue.component('Domains', {
       })
   },
   methods: {
-    test: function() {
-      alert(this.domains)
-    },
     submit: function() {
       var toSubmit = {"domain": this.domain}
       $.ajax({
