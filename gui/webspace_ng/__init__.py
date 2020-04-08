@@ -35,7 +35,7 @@ def getDomains():
 
 	#TO DO: use API to get current domains
 
-	domains = ['www.example.com', 'www.google.com']
+	domains = ['']
 
 	return jsonify({'domains': domains})
 

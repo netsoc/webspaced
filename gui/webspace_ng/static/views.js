@@ -356,8 +356,7 @@ Vue.component('Login', {
           dataType: "json",
           success: function(response) {
             if(response.state == 1) {
-              alert("Got 1 back")
-              this.error = ""
+              window.location.href = "/welcome";
             } else if(response.state == 2) {
               alert("Got 2 back")
             } else {
