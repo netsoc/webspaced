@@ -283,18 +283,51 @@ Vue.component('Ports', {
     template: ` 
   <div class="main">
     <h2>External Ports</h2>
-    <input type="text" placeholder="External Port">
+    <input v-model="external1" type="text" placeholder="External Port">
     <br>
-    <input type="text" placeholder="External Port">
+    <input v-model="external2" type="text" placeholder="External Port">
     <br>
     <h2>Internal Ports</h2>
-    <input type="text" placeholder="Internal Port">
+    <input v-model="internal1" type="text" placeholder="Internal Port">
     <br>
-    <input type="text" placeholder="Internal Port">
+    <input v-model="internal2" type="text" placeholder="Internal Port">
     <br>
     <navbar></navbar>
+    <div class="btn button" v-on:click="submit" > Submit </div>
   </div>
-`
+`,
+data: function() {
+  return {
+    external1: "",
+    external2: "",
+    internal1: "",
+    internal2: ""
+  }
+},
+methods: {
+  submit: function() {
+    var details = {"external1": this.external1, "external2": this.external2,
+      "internal1": this.internal1, "internal2": this.internal2}
+    $.ajax({
+          type: "POST",
+          contentType: "application/json;charset=utf-8",
+          url: "/api/ports",
+          traditional: "true",
+          data: JSON.stringify({details}),
+          dataType: "json",
+          success: function(response) {
+            if(response.result == true) {
+              alert("Successfully added")
+            } else {
+              alert("Error adding these ports")
+            }
+          },
+          error: function(error) {
+            console.error(error)
+          }
+        })
+  }
+}
 });
 
 
@@ -313,7 +346,7 @@ Vue.component('OperatingSystem', {
         <div class = "col"> Alpine </div> 
       </div>
     </div> 
-    <button class = "center"type = "button"> Next </button> 
+    <button class = "center" type = "button"> Next </button> 
     <footer style = "text-align: center"> Brought to you by DU Netsoc</footer>
   `
 });
@@ -356,9 +389,9 @@ Vue.component('Login', {
           dataType: "json",
           success: function(response) {
             if(response.state == 1) {
-              window.location.href = "/welcome";
+              window.location.href = "/welcome"
             } else if(response.state == 2) {
-              alert("Got 2 back")
+              window.loaction.href = "/dashboard"
             } else {
               alert("Email/Password incorrect")
             }

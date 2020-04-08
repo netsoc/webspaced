@@ -71,3 +71,16 @@ def submitConfigs():
 	#TO DO: use API to configure webspace
 
 	return jsonify({'state': True})
+
+#
+@app.route('/api/ports', methods=['GET', 'POST'])
+def submitPorts():
+	ports = request.get_json()
+	external1 = ports['details']['external1']
+	external2 = ports['details']['external2']
+	internal1 = ports['details']['internal1']
+	internal2 = ports['details']['internal2']
+
+	#TO DO: use API to configure ports
+
+	return jsonify({'result': True})
