@@ -103,7 +103,7 @@ Vue.component('Dashboard', {
                   .enter()
                   .append('path')
                   .attr('d', d3.arc()
-                      .innerRadius(100) // This is the size of the donut hole
+                      .innerRadius(100)
                       .outerRadius(radius)
                   )
                   .attr('fill', function(d) { return (color(d.data.key)) })
