@@ -72,7 +72,7 @@ def submitConfigs():
 
 	return jsonify({'state': True})
 
-#
+# Get submission of ports from the user
 @app.route('/api/ports', methods=['GET', 'POST'])
 def submitPorts():
 	ports = request.get_json()
@@ -84,3 +84,36 @@ def submitPorts():
 	#TO DO: use API to configure ports
 
 	return jsonify({'result': True})
+
+# Get OS request from the user
+@app.route('/api/os', methods=['GET', 'POST'])
+def submitOS():
+	osDetails = request.get_json()
+	os = osDetails['details']['os']
+
+	# Arch: os = 1
+	# Alpine: os = 2
+	# Centos: os = 3
+	# Debian: os = 4
+	# Fedora: os = 5
+	# Ubuntu: os = 6
+
+	#TO DO: use API to set os preference
+
+
+	return jsonify({'state': 1})
+
+# Get Root Password from the user
+@app.route('/api/root', methods=['GET', 'POST'])
+def submitRoot():
+	passwordDetails = request.get_json()
+	password = passwordDetails['details']['password']
+	confirm = passwordDetails['details']['confirm']
+	ssh = passwordDetails['details']['ssh']
+
+	if(password != confirm) :
+		return jsonify({'state': 0})
+
+	#TO DO: use API to set password and ssh
+
+	return jsonify({'state': 1})

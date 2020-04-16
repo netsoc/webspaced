@@ -349,6 +349,7 @@ Vue.component('OperatingSystem', {
     <button class = "center" type = "button"> Next </button> 
     <footer style = "text-align: center"> Brought to you by DU Netsoc</footer>
   `
+  
 });
 
 Vue.component('Login', {
@@ -431,19 +432,19 @@ Vue.component('OperatingSystem', {
         <div class = "col"> 
         <h4 style = "text-align: center">Arch</h4>  
         <img src="/static/images/Arch.png" alt="Arch Logo" class="center-img">
-          <button class="center button3"> Select </download>
+          <button v-on:click="os = 1" class="center button3"> Select </download>
         </div>
 
         <div class = "col"> 
           <h4 style = "text-align: center">Alpine</h4>
           <img src="/static/images/Alpine.png" alt="Alpine Logo" class="center-img">
-          <button class="center button3"> Select </download>
+          <button v-on:click="os = 2" class="center button3"> Select </download>
         </div>
 
         <div class = "col"> 
           <h4 style = "text-align: center">Centos</h4> 
           <img src="/static/images/Centos.png" alt="Centos Logo" class="center-img">
-          <button class="center button3"> Select </download>
+          <button v-on:click="os = 3" class="center button3"> Select </download>
         </div> 
       </div> 
       <br>
@@ -452,41 +453,100 @@ Vue.component('OperatingSystem', {
         <div class = "col">
           <h4 style = "text-align: center">Debian</h4> 
           <img src="/static/images/Debian.png" alt="Debian Logo" class="center-img">
-          <button class="center button3"> Select </download> 
+          <button v-on:click="os = 4" class="center button3"> Select </download> 
         </div> 
         
         <div class = "col">
           <h4 style = "text-align: center">Fedora</h4>  
           <img src="/static/images/Fedora.png" alt="Fedora Logo" class="center-img">
-          <button class="center button3"> Select </download>
+          <button v-on:click="os = 5" class="center button3"> Select </download>
         </div> 
 
         <div class = "col">
           <h4 style = "text-align: center">Ubuntu</h4> 
           <img src="/static/images/Ubuntu.png" alt="Ubuntu Logo" class="center-img">
-          <button class="center button3"> Select </download>
+          <button v-on:click="os = 6" class="center button3"> Select </download>
         </div> 
       </div>
     </div>
-    <a class="button2 bottom-right-corner" href= "/create-root"> Next </a>    
+    <a v-on:click="submit" class="button2 bottom-right-corner" > Next </a>    
   </div>
-  `
+  `,
+  data: function() {
+    return {
+      os : ""
+    }
+  },
+  methods: {
+      submit: function() {
+        var details = {"os": this.os}
+        $.ajax({
+          type: "POST",
+          contentType: "application/json;charset=utf-8",
+          url: "/api/os",
+          traditional: "true",
+          data: JSON.stringify({details}),
+          dataType: "json",
+          success: function(response) {
+            if(response.state == 1) {
+              window.location.href = "/create-root"
+            } else {
+              alert("Error")
+            }
+          },
+          error: function(error) {
+            console.error(error)
+          }
+        })
+      }
+    }
 });
 
 Vue.component('CreateRootPW', {
     template: `
   <div>
     <h1>Create your Root Password</h1>
-    <input type="password" class="rootpassword" placeholder="Enter Password">
+    <input v-model="password" type="password" class="rootpassword" placeholder="Enter Password">
     <br>
-    <input type="password" class="rootpassword" placeholder="Re-enter Password">
+    <input v-model="confirmPassword" type="password" class="rootpassword" placeholder="Re-enter Password">
     <br>
     <h1 style="margin-top: 50px;">Create an SSH Key (Optional)</h1>
-    <textarea></textarea>
+    <textarea v-model="ssh"></textarea>
     <a class="button2 bottom-left-corner" href= "/choose-os"> Previous </a> 
-    <a class="button2 bottom-right-corner" href= "/congrats"> Next </a>
+    <a v-on:click="submit" class="button2 bottom-right-corner"> Next </a>
   </div> 
-  `
+  `,
+  data : function() {
+    return {
+      password: "",
+      confirmPassword : "",
+      ssh: ""
+    }
+  },
+  methods: {
+    submit: function() {
+      
+      var details = {'password' : this.password, "confirm": this.confirmPassword, 'ssh': this.ssh}
+      $.ajax({
+        type: "POST",
+        contentType: "application/json;charset=utf-8",
+        url: "/api/root",
+        traditional: "true",
+        data: JSON.stringify({details}),
+        dataType: "json",
+        success: function(response) {
+          if(response.state == 1) {
+            window.location.href = "/congrats"
+          } else if(response.state == 0) {
+            alert("Passwords do not match")
+          }
+        },
+        error: function(error) {
+          console.error(error)
+        }
+      })
+    }
+  }
 });
 
 Vue.component('Congratulations', {
