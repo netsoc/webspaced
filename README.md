@@ -15,7 +15,7 @@ reverse proxy, port forwarding and Heroku-style transparent booting make it poss
 webspaces available on the limited hardware of a university society such as Netsoc.
 
 ## Features
-`webspace-ng` provides at its core a backend which communicates with the containerisation framework
+`webspace-ng` provides at its core a backend ([`webspaced`](webspaced/)) which communicates with the containerisation framework
 ([LXD](https://linuxcontainers.org/lxd/)), reverse proxy ([Traefik](https://containo.us/traefik/)) and exposes a REST
 API for frontends such as the CLI and web UI.
 
