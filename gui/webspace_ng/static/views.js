@@ -150,22 +150,77 @@ Vue.component('Configs', {
   <div class="main">
     <div>
       <h2>HTTP/HTTPS Ports</h2>
-      <input type="text" placeholder="HTTP Port">
+      <input v-model="HTTP" type="text" placeholder="HTTP Port">
       <br>
-      <input type="text" placeholder="HTTPs Port">
+      <input v-model="HTTPS" type="text" placeholder="HTTPs Port">
       <br>
       <h2>Startup Delay (Seconds)</h2>
-      <input type="text" placeholder="Delay">
+      <input v-model="Startup" type="text" placeholder="Delay">
       <br>
       <h2> Enable SSL Termination </h2>
       <label class="switch">
-        <input type="checkbox">
+        <input v-model="SSL" type="checkbox">
         <span class="slider round"></span>
       </label>
+      <div class="btn button bottom-right-corner" v-on:click="submit"> Submit Configs </div>
+      <div>
+        <h5 style="margin: 20px 0 20px 0;color:grey">Current configurations:</h5>
+        <p style="color: grey">HTTP: {{ currentHTTP }}   
+          HTTPS: {{ currentHTTPS }}   
+          Startup Delay: {{ currentStartup }}s   
+          SSL Termination: {{ currentSSL }}</p>
+      </div>
     </div> 
     <navbar></navbar>
   </div>
-`
+`,
+data: function() {
+  return {
+    HTTP: "",
+    HTTPS: "",
+    Startup: "",
+    SSL: "",
+    currentHTTP: "",
+    currentHTTPS: "",
+    currentStartup: "",
+    currentSSL: ""
+  }
+},
+mounted() {
+  axios.get('/api/getConfigs')
+    .then(response => {
+      this.currentHTTP = response.data.HTTP
+      this.currentHTTPS = response.data.HTTPS
+      this.currentStartup = response.data.Startup
+      this.currentSSL = response.data.SSL
+    })
+    .catch(error => {
+      console.log(error)
+    })
+},
+methods: {
+  submit: function() {
+    var configs = {"HTTP": this.HTTP, "HTTPS": this.HTTPS, "Startup": this.Startup, "SSL": this.SSL}
+    $.ajax({
+      type: "POST",
+      contentType: "application/json;charset=utf-8",
+      url: "/api/submitConfigs",
+      traditional: "true",
+      data: JSON.stringify({configs}),
+      dataType: "json",
+      success: function(response) {
+        if(response.state == true) {
+          alert("Submitted configs successfully")
+        } else {
+          alert("Didn't work")
+        }
+      },
+      error: function(error) {
+        console.log(error)
+      }
+    })
+  } 
+}
 });
 
 Vue.component('Domains', {
@@ -173,18 +228,52 @@ Vue.component('Domains', {
   <div class="main">
     <h2>Domains</h2>
     <ul id="domains">
-      <li id="element1"> <input type="text" placeholder="Domains"> </li>
+      <li id="element1"> <input v-model="domain" type="text" placeholder="Domains"> </li>
     </ul>
-    <div class="btn button"  v-on:click="greet" > Add More Domains </div>
+    <div class="btn button" v-on:click="submit" > Add Domain </div>
+    <div>
+      <h5 style="margin: 20px 0 10px 0; color: grey">Current Domains:</h5>
+      <p style="color: grey" v-for="domain in domains">{{ domain }}</p>
+    </div>
     <navbar></navbar>
   </div>
   `,
+  data: function() {
+    return {
+      domain: "",
+      domains: [""]
+    }
+  },
+  mounted() {
+    axios.get('/api/getDomains')
+      .then(response => {
+        this.domains = response.data.domains
+      })
+      .catch(error => {
+        console.log(error)
+      })
+  },
   methods: {
-    greet: function (event) {
-      // `this` inside methods point to the Vue instance
-      alert('Hello ' + this.name + '!')
-      // `event` is the native DOM event
-      alert(event.target.tagName)
+    submit: function() {
+      var toSubmit = {"domain": this.domain}
+      $.ajax({
+          type: "POST",
+          contentType: "application/json;charset=utf-8",
+          url: "/api/domains",
+          traditional: "true",
+          data: JSON.stringify({toSubmit}),
+          dataType: "json",
+          success: function(response) {
+            if(response.result == true) {
+              alert(response.domain + " successfully added")
+            } else {
+              alert("Error adding this domain")
+            }
+          },
+          error: function(error) {
+            console.error(error)
+          }
+        })
     }
   }
   
@@ -194,18 +283,51 @@ Vue.component('Ports', {
     template: ` 
   <div class="main">
     <h2>External Ports</h2>
-    <input type="text" placeholder="External Port">
+    <input v-model="external1" type="text" placeholder="External Port">
     <br>
-    <input type="text" placeholder="External Port">
+    <input v-model="external2" type="text" placeholder="External Port">
     <br>
     <h2>Internal Ports</h2>
-    <input type="text" placeholder="Internal Port">
+    <input v-model="internal1" type="text" placeholder="Internal Port">
     <br>
-    <input type="text" placeholder="Internal Port">
+    <input v-model="internal2" type="text" placeholder="Internal Port">
     <br>
     <navbar></navbar>
+    <div class="btn button" v-on:click="submit" > Submit </div>
   </div>
-`
+`,
+data: function() {
+  return {
+    external1: "",
+    external2: "",
+    internal1: "",
+    internal2: ""
+  }
+},
+methods: {
+  submit: function() {
+    var details = {"external1": this.external1, "external2": this.external2,
+      "internal1": this.internal1, "internal2": this.internal2}
+    $.ajax({
+          type: "POST",
+          contentType: "application/json;charset=utf-8",
+          url: "/api/ports",
+          traditional: "true",
+          data: JSON.stringify({details}),
+          dataType: "json",
+          success: function(response) {
+            if(response.result == true) {
+              alert("Successfully added")
+            } else {
+              alert("Error adding these ports")
+            }
+          },
+          error: function(error) {
+            console.error(error)
+          }
+        })
+  }
+}
 });
 
 
@@ -224,9 +346,10 @@ Vue.component('OperatingSystem', {
         <div class = "col"> Alpine </div> 
       </div>
     </div> 
-    <button class = "center"type = "button"> Next </button> 
+    <button class = "center" type = "button"> Next </button> 
     <footer style = "text-align: center"> Brought to you by DU Netsoc</footer>
   `
+  
 });
 
 Vue.component('Login', {
@@ -234,20 +357,52 @@ Vue.component('Login', {
       <div class ="center">
         <img class="center" id="login-logo" src="/static/images/logo.png" alt="Netsoc Logo">
             <div class="form-group login-box center">
-                <input type="text" name="email" class="form-control" placeholder="Email" style="border:none; background-color:#fff;"/>
+                <input type="text" v-model="email" name="email" class="form-control" placeholder="Email" style="border:none; background-color:#fff;"/>
             </div>
             <div class="form-group login-box center">
-                <input type="password" name="password" class="form-control" placeholder="Password" style="border:none"/>
+                <input type="password" v-model="password" name="password" class="form-control" placeholder="Password" style="border:none"/>
+                <p>{{ error }}</p>
             </div>
         </form>
         <div class="bottom-right-corner">
-          <a href= "/welcome" class="button center"> Login </a>
+          <a v-on:click="submit" class="button center"> Login </a>
         </div>
         <div class="bottom-left-corner">
           <p>Made by DU Netsoc</p>
         </div>
       </div>
-    `
+    `,
+    data: function() {
+      return {  
+        email: "",
+        password: ""
+      }
+    },
+    methods: {
+      submit: function() {
+        var details = {"email": this.email, "password": this.password}
+        $.ajax({
+          type: "POST",
+          contentType: "application/json;charset=utf-8",
+          url: "/api/login",
+          traditional: "true",
+          data: JSON.stringify({details}),
+          dataType: "json",
+          success: function(response) {
+            if(response.state == 1) {
+              window.location.href = "/welcome"
+            } else if(response.state == 2) {
+              window.loaction.href = "/dashboard"
+            } else {
+              alert("Email/Password incorrect")
+            }
+          },
+          error: function(error) {
+            console.error(error)
+          }
+        })
+      }
+    }
 });
 
 Vue.component('Welcome', {
@@ -277,19 +432,19 @@ Vue.component('OperatingSystem', {
         <div class = "col"> 
         <h4 style = "text-align: center">Arch</h4>  
         <img src="/static/images/Arch.png" alt="Arch Logo" class="center-img">
-          <button class="center button3"> Select </download>
+          <button v-on:click="os = 1" class="center button3"> Select </download>
         </div>
 
         <div class = "col"> 
           <h4 style = "text-align: center">Alpine</h4>
           <img src="/static/images/Alpine.png" alt="Alpine Logo" class="center-img">
-          <button class="center button3"> Select </download>
+          <button v-on:click="os = 2" class="center button3"> Select </download>
         </div>
 
         <div class = "col"> 
           <h4 style = "text-align: center">Centos</h4> 
           <img src="/static/images/Centos.png" alt="Centos Logo" class="center-img">
-          <button class="center button3"> Select </download>
+          <button v-on:click="os = 3" class="center button3"> Select </download>
         </div> 
       </div> 
       <br>
@@ -298,41 +453,100 @@ Vue.component('OperatingSystem', {
         <div class = "col">
           <h4 style = "text-align: center">Debian</h4> 
           <img src="/static/images/Debian.png" alt="Debian Logo" class="center-img">
-          <button class="center button3"> Select </download> 
+          <button v-on:click="os = 4" class="center button3"> Select </download> 
         </div> 
         
         <div class = "col">
           <h4 style = "text-align: center">Fedora</h4>  
           <img src="/static/images/Fedora.png" alt="Fedora Logo" class="center-img">
-          <button class="center button3"> Select </download>
+          <button v-on:click="os = 5" class="center button3"> Select </download>
         </div> 
 
         <div class = "col">
           <h4 style = "text-align: center">Ubuntu</h4> 
           <img src="/static/images/Ubuntu.png" alt="Ubuntu Logo" class="center-img">
-          <button class="center button3"> Select </download>
+          <button v-on:click="os = 6" class="center button3"> Select </download>
         </div> 
       </div>
     </div>
-    <a class="button2 bottom-right-corner" href= "/create-root"> Next </a>    
+    <a v-on:click="submit" class="button2 bottom-right-corner" > Next </a>    
   </div>
-  `
+  `,
+  data: function() {
+    return {
+      os : ""
+    }
+  },
+  methods: {
+      submit: function() {
+        var details = {"os": this.os}
+        $.ajax({
+          type: "POST",
+          contentType: "application/json;charset=utf-8",
+          url: "/api/os",
+          traditional: "true",
+          data: JSON.stringify({details}),
+          dataType: "json",
+          success: function(response) {
+            if(response.state == 1) {
+              window.location.href = "/create-root"
+            } else {
+              alert("Error")
+            }
+          },
+          error: function(error) {
+            console.error(error)
+          }
+        })
+      }
+    }
 });
 
 Vue.component('CreateRootPW', {
     template: `
   <div>
     <h1>Create your Root Password</h1>
-    <input type="password" class="rootpassword" placeholder="Enter Password">
+    <input v-model="password" type="password" class="rootpassword" placeholder="Enter Password">
     <br>
-    <input type="password" class="rootpassword" placeholder="Re-enter Password">
+    <input v-model="confirmPassword" type="password" class="rootpassword" placeholder="Re-enter Password">
     <br>
     <h1 style="margin-top: 50px;">Create an SSH Key (Optional)</h1>
-    <textarea></textarea>
+    <textarea v-model="ssh"></textarea>
     <a class="button2 bottom-left-corner" href= "/choose-os"> Previous </a> 
-    <a class="button2 bottom-right-corner" href= "/congrats"> Next </a>
+    <a v-on:click="submit" class="button2 bottom-right-corner"> Next </a>
   </div> 
-  `
+  `,
+  data : function() {
+    return {
+      password: "",
+      confirmPassword : "",
+      ssh: ""
+    }
+  },
+  methods: {
+    submit: function() {
+      
+      var details = {'password' : this.password, "confirm": this.confirmPassword, 'ssh': this.ssh}
+      $.ajax({
+        type: "POST",
+        contentType: "application/json;charset=utf-8",
+        url: "/api/root",
+        traditional: "true",
+        data: JSON.stringify({details}),
+        dataType: "json",
+        success: function(response) {
+          if(response.state == 1) {
+            window.location.href = "/congrats"
+          } else if(response.state == 0) {
+            alert("Passwords do not match")
+          }
+        },
+        error: function(error) {
+          console.error(error)
+        }
+      })
+    }
+  }
 });
 
 Vue.component('Congratulations', {
