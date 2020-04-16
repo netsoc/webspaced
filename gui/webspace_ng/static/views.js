@@ -1,3 +1,4 @@
+// error page if a page is not found 
 Vue.component('NotFound', {
     template: `
     <div>
@@ -8,6 +9,7 @@ Vue.component('NotFound', {
   `
 });
 
+// First view when entering the website
 Vue.component('HomeView', {
     template: `
     <div>
@@ -26,6 +28,7 @@ Vue.component('HomeView', {
   `
 });
 
+// navbar that is present on the user's dashboard, the componenent is often used on other pages
 Vue.component('Navbar', {
     template: `
     <div>
@@ -42,6 +45,7 @@ Vue.component('Navbar', {
   `
 });
 
+// graph object for testing
 Vue.component('Graph', {
     template: `
     <body>
@@ -52,6 +56,7 @@ Vue.component('Graph', {
   `
 });
 
+// main dashboard with a representation of the webspace with a graph 
 Vue.component('Dashboard', {
     template: ` 
     <div class="main">
@@ -113,6 +118,7 @@ Vue.component('Dashboard', {
           }
       });
 
+// mock terminal that will be connected in the future to netsoc's backend
 Vue.component('Terminal', {
     template: ` 
   <div class="main">
@@ -121,8 +127,10 @@ Vue.component('Terminal', {
   </div>
   `,
     mounted() {
+      // create a terminal 
         var term = new Terminal();
         term.open(document.getElementById('terminal'));
+        // greet the user
         term.write('Hello from \x1B[1;3;31mnetsoc terminal\x1B[0m $ ')
           if (term._initialized) {
               return;
@@ -130,6 +138,7 @@ Vue.component('Terminal', {
           term._initialized = true;
           term.writeln('This is a local terminal emulation');
           term.writeln('Type some keys and commands to play around.');
+          // take commands and feed the user a new line 
           term.onKey(e => {
               const printable = !e.domEvent.altKey && !e.domEvent.altGraphKey && !e.domEvent.ctrlKey && !e.domEvent.metaKey;
               if (e.domEvent.keyCode === 13) {
@@ -145,6 +154,7 @@ Vue.component('Terminal', {
     }
 });
 
+// configs page that holds the SSL keys and HTTP ports
 Vue.component('Configs', {
     template: ` 
   <div class="main">
@@ -168,6 +178,7 @@ Vue.component('Configs', {
 `
 });
 
+// list of domains registered to the webspace
 Vue.component('Domains', {
     template: ` 
   <div class="main">
@@ -190,6 +201,7 @@ Vue.component('Domains', {
   
 });
 
+// ports that are associated with the webspace
 Vue.component('Ports', {
     template: ` 
   <div class="main">
@@ -208,7 +220,7 @@ Vue.component('Ports', {
 `
 });
 
-
+// list of operating systems the user can choose from 
 Vue.component('OperatingSystem', {
     template: `
     <div class = "container">
@@ -229,6 +241,7 @@ Vue.component('OperatingSystem', {
   `
 });
 
+// login page with user name and password --> linking with netsoc verification using API
 Vue.component('Login', {
     template: `
       <div class ="center">
@@ -250,6 +263,7 @@ Vue.component('Login', {
     `
 });
 
+// welcome page when the user enters their dashboard
 Vue.component('Welcome', {
     template: `
     <div> 
@@ -267,6 +281,7 @@ Vue.component('Welcome', {
   `
 });
 
+// list of all operating systems with images that the user clicks on 
 Vue.component('OperatingSystem', {
     template: `
   <div>
@@ -319,6 +334,7 @@ Vue.component('OperatingSystem', {
   `
 });
 
+// input box for creating a root password
 Vue.component('CreateRootPW', {
     template: `
   <div>
@@ -335,6 +351,7 @@ Vue.component('CreateRootPW', {
   `
 });
 
+// once the user is done, they are given a message that their space is set up 
 Vue.component('Congratulations', {
     template: `
     <div>
