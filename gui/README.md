@@ -1,6 +1,9 @@
 # Frontend
-This repository contains the frontend web GUI portion of `webspace-ng`, which talks to the backend in order to manage
-a user's webspace.
+This repository contains the frontend web GUI portion of `webspace-ng`, which talks to the [backend](../webspaced/) in
+order to manage a user's webspace.
+
+## Deploying
+TL;DR Remove the `build` line in `docker-compose.yaml` and run `docker-compose up`.
 
 ## Developing
 [Docker](https://docs.docker.com/install/) and [Docker Compose](https://docs.docker.com/compose/install/) should be
