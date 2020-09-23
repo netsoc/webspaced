@@ -16,10 +16,8 @@ webspaces available on the limited hardware of a university society such as Nets
 
 ## Features
 `webspace-ng` provides at its core a backend ([`webspaced`](webspaced/)) which communicates with the containerisation framework
-([LXD](https://linuxcontainers.org/lxd/)), reverse proxy ([Traefik](https://containo.us/traefik/)) and exposes a REST
-API for frontends such as the CLI and web UI.
+([LXD](https://linuxcontainers.org/lxd/)), reverse proxy ([Traefik](https://traefik.io/traefik/)) and exposes a REST
+API for frontends such as CLI's or web UI's.
 
  - CLI is a port of Netsoc's original version updated to communicate with the
 [REST API exposed by the backend](webspaced/api.md) and can be found in the [`cli`](cli/) directory
- - Frontend is a Flask and Vue.js based application which provides a user-friendly interface to manage a user's
- webspace and can be found in the [`gui`](gui/) directory
