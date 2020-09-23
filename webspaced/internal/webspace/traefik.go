@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/go-redis/redis/v7"
-	"github.com/netsoc/webspace-ng/webspaced/internal/config"
+	"github.com/netsoc/webspaced/internal/config"
 	log "github.com/sirupsen/logrus"
 )
 

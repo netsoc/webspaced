@@ -1,8 +1,8 @@
-FROM netsoc/webspace-ng-traefik AS builder
+FROM ghcr.io/netsoc/traefik AS traefik
 
 
-FROM alpine:3.11
-COPY --from=builder /traefik /usr/local/bin/traefik
+FROM alpine:3.12
+COPY --from=traefik /traefik /usr/local/bin/traefik
 
 RUN apk --no-cache add redis
 

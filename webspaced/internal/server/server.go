@@ -13,8 +13,8 @@ import (
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	lxd "github.com/lxc/lxd/client"
-	"github.com/netsoc/webspace-ng/webspaced/internal/config"
-	"github.com/netsoc/webspace-ng/webspaced/internal/webspace"
+	"github.com/netsoc/webspaced/internal/config"
+	"github.com/netsoc/webspaced/internal/webspace"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 )

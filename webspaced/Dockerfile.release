@@ -1,16 +1,21 @@
-FROM golang:1.14-alpine as builder
-RUN apk --no-cache add gcc musl-dev
+FROM golang:1.15-alpine AS builder
+RUN apk --no-cache add git gcc musl-dev linux-headers
 
-WORKDIR /usr/local/webspaced
+WORKDIR /usr/local/lib/webspaced
 COPY go.* ./
 RUN go mod download
 
-COPY . .
-RUN go build -ldflags '-s -w' -o bin/ ./cmd/...
+COPY tools.go ./
+RUN cat tools.go | sed -nr 's|^\t_ "(.+)"$|\1|p' | xargs -tI % go get %
+
+COPY cmd/ ./cmd/
+COPY internal/ ./internal/
+RUN mkdir bin/ && go build -ldflags '-s -w' -o bin/ ./cmd/...
 
 
-FROM alpine:3.11
+FROM alpine:3.12
 
-COPY --from=builder /usr/local/webspaced/bin/* /usr/local/bin/
+COPY --from=builder /usr/local/lib/webspaced/bin/* /usr/local/bin/
 
+EXPOSE 80/tcp
 ENTRYPOINT ["/usr/local/bin/webspaced"]

@@ -8,7 +8,7 @@ import (
 
 	lxd "github.com/lxc/lxd/client"
 	lxdApi "github.com/lxc/lxd/shared/api"
-	"github.com/netsoc/webspace-ng/webspaced/internal/config"
+	"github.com/netsoc/webspaced/internal/config"
 	log "github.com/sirupsen/logrus"
 )
 

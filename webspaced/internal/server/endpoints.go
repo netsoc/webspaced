@@ -9,7 +9,7 @@ import (
 	"strconv"
 
 	"github.com/gorilla/mux"
-	"github.com/netsoc/webspace-ng/webspaced/internal/webspace"
+	"github.com/netsoc/webspaced/internal/webspace"
 )
 
 func (s *Server) apiImages(w http.ResponseWriter, r *http.Request) {

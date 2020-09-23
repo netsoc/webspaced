@@ -4,8 +4,8 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/netsoc/webspace-ng/webspaced/internal/config"
-	"github.com/netsoc/webspace-ng/webspaced/internal/server"
+	"github.com/netsoc/webspaced/internal/config"
+	"github.com/netsoc/webspaced/internal/server"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"golang.org/x/sys/unix"

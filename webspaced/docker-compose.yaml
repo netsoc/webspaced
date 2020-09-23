@@ -11,7 +11,7 @@ services:
       - 127.0.0.1:6379:6379
 
   traefik:
-    image: netsoc/webspace-ng-traefik-redis
+    image: ghcr.io/netsoc/webspaced/traefik:dev
     build:
       context: .
       dockerfile: Dockerfile.traefik
@@ -29,7 +29,7 @@ services:
     network_mode: host
 
   app:
-    image: netsoc/webspaced:dev
+    image: ghcr.io/netsoc/webspaced:dev
     build:
       context: .
       dockerfile: Dockerfile.dev
@@ -37,7 +37,7 @@ services:
       - LXD_SOCKET=/run/lxd.sock
       - DEBUG=1
     volumes:
-      - .:/usr/local/webspaced
+      - .:/usr/local/lib/webspaced
       - ./config.yaml:/etc/webspaced/config.yaml:ro
       - ./sockets:/run/webspaced
       # If you installed LXD via Snap, use the following instead!

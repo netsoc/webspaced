@@ -13,7 +13,7 @@ import (
 
 	"github.com/cenkalti/backoff/v4"
 	lxdApi "github.com/lxc/lxd/shared/api"
-	"github.com/netsoc/webspace-ng/webspaced/internal/config"
+	"github.com/netsoc/webspaced/internal/config"
 	log "github.com/sirupsen/logrus"
 )
 
