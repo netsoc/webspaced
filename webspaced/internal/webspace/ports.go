@@ -6,6 +6,7 @@ import (
 	"net"
 	"sync"
 
+	"github.com/netsoc/webspaced/pkg/util"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -117,7 +118,7 @@ func NewPortsManager() *PortsManager {
 // Add creates a new port forwarding
 func (p *PortsManager) Add(e uint16, backendAddr *net.TCPAddr, hook PortHook) error {
 	if _, ok := p.forwards[e]; ok {
-		return ErrUsed
+		return util.ErrUsed
 	}
 
 	forward, err := NewPortForward(e, backendAddr, hook)
@@ -134,7 +135,7 @@ func (p *PortsManager) Add(e uint16, backendAddr *net.TCPAddr, hook PortHook) er
 func (p *PortsManager) Remove(e uint16) error {
 	forward, ok := p.forwards[e]
 	if !ok {
-		return ErrNotFound
+		return util.ErrNotFound
 	}
 
 	forward.Stop()
@@ -172,7 +173,7 @@ func (p *PortsManager) AddAll(w *Webspace, addr string) error {
 
 		hook := func(f *PortForward) error {
 			log.WithFields(log.Fields{
-				"user":  w.User,
+				"uid":   w.UserID,
 				"ePort": e,
 				"iPort": i,
 			}).Debug("Waiting for webspace to start to forward port")

@@ -1,8 +1,11 @@
 package config
 
 import (
+	"fmt"
 	"html/template"
+	"io/ioutil"
 	"reflect"
+	"strings"
 
 	"github.com/mitchellh/mapstructure"
 	log "github.com/sirupsen/logrus"
@@ -51,36 +54,130 @@ type WebspaceConfig struct {
 
 // Config describes the configuration for Server
 type Config struct {
-	LogLevel        log.Level `mapstructure:"log_level"`
-	BindSocket      string    `mapstructure:"bind_socket"`
-	PwGrProxySocket string    `mapstructure:"pw_gr_proxy_socket"`
-	LXD             struct {
-		Socket  string
+	LogLevel log.Level `mapstructure:"log_level"`
+
+	IAM struct {
+		URL           string
+		Token         string
+		AllowInsecure bool `mapstructure:"allow_insecure"`
+	}
+
+	LXD struct {
+		URL string
+		TLS struct {
+			// Set CA if using PKI mode
+			CA     string
+			CAFile string `mapstructure:"ca_file"`
+
+			// Set server certificate if not using PKI
+			ServerCert     string `mapstructure:"server_cert"`
+			ServerCertFile string `mapstructure:"server_cert_file"`
+
+			ClientCert     string `mapstructure:"client_cert"`
+			ClientCertFile string `mapstructure:"client_cert_file"`
+
+			ClientKey     string `mapstructure:"client_key"`
+			ClientKeyFile string `mapstructure:"client_key_file"`
+
+			TrustPassword     string `mapstructure:"trust_password"`
+			TrustPasswordFile string `mapstructure:"trust_password_file"`
+
+			AllowInsecure bool `mapstructure:"allow_insecure"`
+		}
+
 		Network string
 	}
+
 	Webspaces struct {
-		AdminGroup      string `mapstructure:"admin_group"`
 		Profile         string
-		InstanceSuffix  string         `mapstructure:"instance_suffix"`
+		InstancePrefix  string         `mapstructure:"instance_prefix"`
 		Domain          string         `mapstructure:"domain"`
 		ConfigDefaults  WebspaceConfig `mapstructure:"config_defaults"`
 		MaxStartupDelay uint16         `mapstructure:"max_startup_delay"`
 		RunLimit        uint           `mapstructure:"run_limit"`
-		Ports           struct {
+
+		Ports struct {
 			Start uint16
 			End   uint16
 			Max   uint16
 		}
 	}
+
+	HTTP struct {
+		ListenAddress string `mapstructure:"listen_address"`
+
+		CORS struct {
+			AllowedOrigins []string `mapstructure:"allowed_origins"`
+		}
+	}
+
 	Traefik struct {
 		Redis struct {
 			Addr string
 			DB   int
 		}
+
 		HTTPEntryPoint  string `mapstructure:"http_entry_point"`
 		HTTPSEntryPoint string `mapstructure:"https_entry_point"`
-		CertResolver    string `mapstructure:"cert_resolver"`
-		SANs            []string
-		WebspacedSocket string `mapstructure:"webspaced_socket"`
+
+		CertResolver string `mapstructure:"cert_resolver"`
+		SANs         []string
+
+		WebspacedURL string `mapstructure:"webspaced_url"`
+		IAMToken     string `mapstructure:"iam_token"`
 	}
+}
+
+func loadSecret(parent interface{}, field string) error {
+	v := reflect.ValueOf(parent).Elem()
+	t := v.Type()
+	if v.Kind() != reflect.Struct {
+		return fmt.Errorf("%v is not a struct", t.Name())
+	}
+
+	if _, ok := t.FieldByName(field); !ok {
+		return fmt.Errorf("%v field %v not found", t.Name(), field)
+	}
+	f := v.FieldByName(field)
+
+	if _, ok := t.FieldByName(field + "File"); !ok {
+		return fmt.Errorf("%v file field %v not found", t.Name(), field)
+	}
+	fileField := v.FieldByName(field + "File")
+
+	if fileField.Kind() != reflect.String {
+		return fmt.Errorf("%v file field %v is not a string", t.Name(), fileField)
+	}
+
+	file := fileField.String()
+	if file == "" {
+		return nil
+	}
+
+	data, err := ioutil.ReadFile(file)
+	if err != nil {
+		return fmt.Errorf("failed to read %v for field %v", file, field)
+	}
+
+	if f.Kind() == reflect.String {
+		f.SetString(strings.TrimSpace(string(data)))
+	} else if t == reflect.SliceOf(reflect.TypeOf(byte(0))) {
+		f.SetBytes(data)
+	} else {
+		return fmt.Errorf("invalid type %v for field %v", t, field)
+	}
+
+	return nil
+}
+
+// ReadSecrets loads values for secret config options from files
+func (c *Config) ReadSecrets() error {
+	tls := []string{"CA", "ServerCert", "ClientCert", "ClientKey", "TrustPassword"}
+	for _, f := range tls {
+		if err := loadSecret(&c.LXD.TLS, f); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

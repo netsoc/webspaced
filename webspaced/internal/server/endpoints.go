@@ -1,25 +1,25 @@
 package server
 
 import (
-	"context"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"strconv"
 
 	"github.com/gorilla/mux"
+	iam "github.com/netsoc/iam/client"
 	"github.com/netsoc/webspaced/internal/webspace"
+	"github.com/netsoc/webspaced/pkg/util"
 )
 
 func (s *Server) apiImages(w http.ResponseWriter, r *http.Request) {
 	images, err := s.Webspaces.Images()
 	if err != nil {
-		JSONErrResponse(w, err, http.StatusInternalServerError)
+		util.JSONErrResponse(w, err, http.StatusInternalServerError)
 		return
 	}
 
-	JSONResponse(w, images, http.StatusOK)
+	util.JSONResponse(w, images, http.StatusOK)
 }
 
 type createWebspaceReq struct {
@@ -31,58 +31,29 @@ type createWebspaceRes struct {
 	SSHPort uint16 `json:"sshPort"`
 }
 
-func wsErrorToStatus(err error) int {
-	switch {
-	case errors.Is(err, webspace.ErrNotFound), errors.Is(err, webspace.ErrNotRunning):
-		return http.StatusNotFound
-	case errors.Is(err, webspace.ErrExists), errors.Is(err, webspace.ErrRunning), errors.Is(err, webspace.ErrUsed):
-		return http.StatusConflict
-	case errors.Is(err, webspace.ErrDomainUnverified), errors.Is(err, webspace.ErrBadPort),
-		errors.Is(err, webspace.ErrTooManyPorts), errors.Is(err, webspace.ErrDefaultDomain),
-		errors.Is(err, webspace.ErrBadValue):
-		return http.StatusBadRequest
-	default:
-		return http.StatusInternalServerError
-	}
-}
-
-func (s *Server) getWebspaceMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		user := r.Context().Value(keyUser).(string)
-		ws, err := s.Webspaces.Get(user)
-		if err != nil {
-			JSONErrResponse(w, err, wsErrorToStatus(err))
-			return
-		}
-
-		r = r.WithContext(context.WithValue(r.Context(), keyWebspace, ws))
-		next.ServeHTTP(w, r)
-	})
-}
-
 func (s *Server) apiGetWebspace(w http.ResponseWriter, r *http.Request) {
 	ws := r.Context().Value(keyWebspace).(*webspace.Webspace)
-	JSONResponse(w, ws, http.StatusOK)
+	util.JSONResponse(w, ws, http.StatusOK)
 }
 func (s *Server) apiCreateWebspace(w http.ResponseWriter, r *http.Request) {
 	var body createWebspaceReq
-	if err := ParseJSONBody(&body, w, r); err != nil {
+	if err := util.ParseJSONBody(&body, w, r); err != nil {
 		return
 	}
 
-	user := r.Context().Value(keyUser).(string)
-	ws, err := s.Webspaces.Create(user, body.Image, body.Password, body.SSHKey)
+	user := r.Context().Value(keyUser).(*iam.User)
+	ws, err := s.Webspaces.Create(int(user.Id), body.Image, body.Password, body.SSHKey)
 	if err != nil {
-		JSONErrResponse(w, err, wsErrorToStatus(err))
+		util.JSONErrResponse(w, err, 0)
 		return
 	}
 
-	JSONResponse(w, ws, http.StatusCreated)
+	util.JSONResponse(w, ws, http.StatusCreated)
 }
 func (s *Server) apiDeleteWebspace(w http.ResponseWriter, r *http.Request) {
 	ws := r.Context().Value(keyWebspace).(*webspace.Webspace)
 	if err := ws.Delete(); err != nil {
-		JSONErrResponse(w, err, wsErrorToStatus(err))
+		util.JSONErrResponse(w, err, 0)
 		return
 	}
 
@@ -102,7 +73,7 @@ func (s *Server) apiSetWebspaceState(w http.ResponseWriter, r *http.Request) {
 		err = ws.Shutdown()
 	}
 	if err != nil {
-		JSONErrResponse(w, err, wsErrorToStatus(err))
+		util.JSONErrResponse(w, err, 0)
 		return
 	}
 
@@ -113,35 +84,41 @@ func (s *Server) apiGetWebspaceState(w http.ResponseWriter, r *http.Request) {
 
 	state, err := ws.State()
 	if err != nil {
-		JSONErrResponse(w, err, wsErrorToStatus(err))
+		util.JSONErrResponse(w, err, 0)
 		return
 	}
 
-	JSONResponse(w, state, http.StatusOK)
+	util.JSONResponse(w, state, http.StatusOK)
 }
 
 func (s *Server) apiGetWebspaceConfig(w http.ResponseWriter, r *http.Request) {
 	ws := r.Context().Value(keyWebspace).(*webspace.Webspace)
-	JSONResponse(w, ws.Config, http.StatusOK)
+	util.JSONResponse(w, ws.Config, http.StatusOK)
 }
 func (s *Server) apiUpdateWebspaceConfig(w http.ResponseWriter, r *http.Request) {
 	ws := r.Context().Value(keyWebspace).(*webspace.Webspace)
 	oldConf := ws.Config
 
-	if err := ParseJSONBody(&ws.Config, w, r); err != nil {
+	if err := util.ParseJSONBody(&ws.Config, w, r); err != nil {
 		return
 	}
 	if err := ws.Save(); err != nil {
-		JSONErrResponse(w, err, wsErrorToStatus(err))
+		util.JSONErrResponse(w, err, 0)
 		return
 	}
 
-	JSONResponse(w, oldConf, http.StatusOK)
+	util.JSONResponse(w, oldConf, http.StatusOK)
 }
 
 func (s *Server) apiGetWebspaceDomains(w http.ResponseWriter, r *http.Request) {
 	ws := r.Context().Value(keyWebspace).(*webspace.Webspace)
-	JSONResponse(w, ws.Domains, http.StatusOK)
+	domains, err := ws.GetDomains()
+	if err != nil {
+		util.JSONErrResponse(w, err, 0)
+		return
+	}
+
+	util.JSONResponse(w, domains, http.StatusOK)
 }
 func (s *Server) apiWebspaceDomain(w http.ResponseWriter, r *http.Request) {
 	ws := r.Context().Value(keyWebspace).(*webspace.Webspace)
@@ -155,7 +132,7 @@ func (s *Server) apiWebspaceDomain(w http.ResponseWriter, r *http.Request) {
 		err = ws.RemoveDomain(d)
 	}
 	if err != nil {
-		JSONErrResponse(w, err, wsErrorToStatus(err))
+		util.JSONErrResponse(w, err, 0)
 		return
 	}
 
@@ -168,7 +145,7 @@ type addImplicitPortRes struct {
 
 func (s *Server) apiGetWebspacePorts(w http.ResponseWriter, r *http.Request) {
 	ws := r.Context().Value(keyWebspace).(*webspace.Webspace)
-	JSONResponse(w, ws.Ports, http.StatusOK)
+	util.JSONResponse(w, ws.Ports, http.StatusOK)
 }
 func (s *Server) apiWebspacePorts(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
@@ -187,20 +164,20 @@ func (s *Server) apiWebspacePorts(w http.ResponseWriter, r *http.Request) {
 
 	e, err := strconv.ParseUint(eStr, 10, 16)
 	if err != nil {
-		JSONErrResponse(w, webspace.ErrBadPort, http.StatusBadRequest)
+		util.JSONErrResponse(w, util.ErrBadPort, http.StatusBadRequest)
 		return
 	}
 	external := uint16(e)
 
 	i, err := strconv.ParseUint(iStr, 10, 16)
 	if err != nil {
-		JSONErrResponse(w, webspace.ErrBadPort, http.StatusBadRequest)
+		util.JSONErrResponse(w, util.ErrBadPort, http.StatusBadRequest)
 		return
 	}
 	internal := uint16(i)
 
 	if explicit && external == 0 {
-		JSONErrResponse(w, webspace.ErrBadPort, http.StatusBadRequest)
+		util.JSONErrResponse(w, util.ErrBadPort, http.StatusBadRequest)
 		return
 	}
 
@@ -209,19 +186,19 @@ func (s *Server) apiWebspacePorts(w http.ResponseWriter, r *http.Request) {
 	case "POST":
 		external, err = ws.AddPort(external, internal)
 		if err != nil {
-			JSONErrResponse(w, err, wsErrorToStatus(err))
+			util.JSONErrResponse(w, err, 0)
 			return
 		}
 
 		if !explicit {
-			JSONResponse(w, addImplicitPortRes{external}, http.StatusCreated)
+			util.JSONResponse(w, addImplicitPortRes{external}, http.StatusCreated)
 		} else {
 			w.WriteHeader(http.StatusCreated)
 		}
 	case "DELETE":
 		err = ws.RemovePort(external)
 		if err != nil {
-			JSONErrResponse(w, err, wsErrorToStatus(err))
+			util.JSONErrResponse(w, err, 0)
 			return
 		}
 
@@ -233,12 +210,12 @@ func (s *Server) apiConsoleLog(w http.ResponseWriter, r *http.Request) {
 	ws := r.Context().Value(keyWebspace).(*webspace.Webspace)
 	c, err := ws.Log()
 	if err != nil {
-		JSONErrResponse(w, err, wsErrorToStatus(err))
+		util.JSONErrResponse(w, err, 0)
 		return
 	}
 
 	if _, err := io.Copy(w, c); err != nil {
-		JSONErrResponse(w, err, http.StatusInternalServerError)
+		util.JSONErrResponse(w, err, http.StatusInternalServerError)
 	}
 }
 
@@ -246,7 +223,7 @@ func (s *Server) internalAPIEnsureStarted(w http.ResponseWriter, r *http.Request
 	ws := r.Context().Value(keyWebspace).(*webspace.Webspace)
 	ip, err := ws.EnsureStarted()
 	if err != nil {
-		JSONErrResponse(w, err, wsErrorToStatus(err))
+		util.JSONErrResponse(w, err, 0)
 		return
 	}
 

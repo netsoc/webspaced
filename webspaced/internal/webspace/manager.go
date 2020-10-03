@@ -4,18 +4,23 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 
 	lxd "github.com/lxc/lxd/client"
 	lxdApi "github.com/lxc/lxd/shared/api"
+	iam "github.com/netsoc/iam/client"
 	"github.com/netsoc/webspaced/internal/config"
+	"github.com/netsoc/webspaced/pkg/util"
 	log "github.com/sirupsen/logrus"
 )
 
 // Manager manages webspace containers
 type Manager struct {
-	config         *config.Config
-	lxd            lxd.InstanceServer
+	config *config.Config
+	lxd    lxd.InstanceServer
+	iam    *iam.APIClient
+
 	lxdWsUserRegex *regexp.Regexp
 	lxdListener    *lxd.EventListener
 	traefik        *Traefik
@@ -23,11 +28,13 @@ type Manager struct {
 }
 
 // NewManager returns a new Manager instance
-func NewManager(cfg *config.Config, l lxd.InstanceServer) *Manager {
+func NewManager(cfg *config.Config, iam *iam.APIClient, l lxd.InstanceServer) *Manager {
 	return &Manager{
 		cfg,
 		l,
-		regexp.MustCompile(fmt.Sprintf(lxdEventUserRegexTpl, cfg.Webspaces.InstanceSuffix)),
+		iam,
+
+		regexp.MustCompile(fmt.Sprintf(lxdEventUserRegexTpl, cfg.Webspaces.InstancePrefix)),
 		nil,
 		NewTraefik(cfg),
 		NewPortsManager(),
@@ -48,7 +55,7 @@ func (m *Manager) Start() error {
 
 		running := state.StatusCode == lxdApi.Running
 		log.WithFields(log.Fields{
-			"user":    w.User,
+			"uid":     w.UserID,
 			"running": running,
 		}).Debug("Generating initial Traefik / port forwarding config")
 
@@ -84,8 +91,8 @@ func (m *Manager) Shutdown() {
 	m.ports.Shutdown()
 }
 
-func (m *Manager) lxdInstanceName(user string) string {
-	return user + m.config.Webspaces.InstanceSuffix
+func (m *Manager) lxdInstanceName(uid int) string {
+	return fmt.Sprintf("%vu%v", m.config.Webspaces.InstancePrefix, uid)
 }
 
 type lxdEventDetails struct {
@@ -105,10 +112,14 @@ func (m *Manager) onLxdEvent(e lxdApi.Event) {
 		// Not a webspace instance
 		return
 	}
-	user := match[1]
+	uid, err := strconv.Atoi(match[1])
+	if err != nil {
+		log.WithError(err).Error("Failed to parse user ID")
+		return
+	}
 
-	if err := m.traefik.ClearConfig(m.lxdInstanceName(user)); err != nil {
-		log.WithField("user", user).WithError(err).Error("Failed to clear Traefik config")
+	if err := m.traefik.ClearConfig(m.lxdInstanceName(uid)); err != nil {
+		log.WithField("uid", uid).WithError(err).Error("Failed to clear Traefik config")
 		return
 	}
 
@@ -132,9 +143,9 @@ func (m *Manager) onLxdEvent(e lxdApi.Event) {
 		return
 	}
 
-	w, err := m.Get(user)
+	w, err := m.Get(uid, nil)
 	if err != nil {
-		log.WithField("user", user).WithError(err).Error("Failed to retrieve webspace")
+		log.WithField("uid", uid).WithError(err).Error("Failed to retrieve webspace")
 		return
 	}
 
@@ -154,7 +165,7 @@ func (m *Manager) onLxdEvent(e lxdApi.Event) {
 		running = state.StatusCode == lxdApi.Running
 	default:
 		log.WithFields(log.Fields{
-			"user":   user,
+			"uid":    w.UserID,
 			"action": action,
 		}).Warn("Unknown LXD action")
 		return
@@ -170,17 +181,17 @@ func (m *Manager) onLxdEvent(e lxdApi.Event) {
 	}
 
 	log.WithFields(log.Fields{
-		"user":    user,
+		"uid":     w.UserID,
 		"running": running,
 	}).Debug("Updating Traefik / port forward config")
 
 	if err := m.traefik.GenerateConfig(w, addr); err != nil {
-		log.WithField("user", user).WithError(err).Error("Failed to update Traefik config")
+		log.WithField("user", w.UserID).WithError(err).Error("Failed to update Traefik config")
 		return
 	}
 
 	if err := m.ports.AddAll(w, addr); err != nil {
-		log.WithField("user", user).WithError(err).Error("Failed to update port forwards")
+		log.WithField("user", w.UserID).WithError(err).Error("Failed to update port forwards")
 	}
 }
 
@@ -198,7 +209,7 @@ func (m *Manager) instanceToWebspace(i *lxdApi.Instance) (*Webspace, error) {
 	}
 
 	if w.Config.StartupDelay < 0 {
-		return nil, ErrBadValue
+		return nil, util.ErrBadValue
 	}
 
 	return w, nil
@@ -248,10 +259,16 @@ func (m *Manager) Images() ([]Image, error) {
 }
 
 // Get retrieves a Webspace instance from LXD
-func (m *Manager) Get(user string) (*Webspace, error) {
+func (m *Manager) Get(uid int, userHint *iam.User) (*Webspace, error) {
+	if userHint != nil && int(userHint.Id) != uid {
+		return nil, util.ErrUIDMismatch
+	}
+
 	w := &Webspace{
 		manager: m,
-		User:    user,
+		user:    userHint,
+
+		UserID: uid,
 	}
 	n := w.InstanceName()
 
@@ -286,12 +303,13 @@ func (m *Manager) GetAll() ([]*Webspace, error) {
 }
 
 // Create creates a new webspace container via LXD
-func (m *Manager) Create(user string, image string, password string, sshKey string) (*Webspace, error) {
+func (m *Manager) Create(uid int, image string, password string, sshKey string) (*Webspace, error) {
 	w := &Webspace{
 		manager: m,
-		User:    user,
+
+		UserID:  uid,
 		Config:  m.config.Webspaces.ConfigDefaults,
-		Domains: []string{fmt.Sprintf("%v.%v", user, m.config.Webspaces.Domain)},
+		Domains: []string{},
 		Ports:   map[uint16]uint16{},
 	}
 	n := w.InstanceName()
@@ -331,7 +349,7 @@ func (m *Manager) Create(user string, image string, password string, sshKey stri
 	if password != "" {
 		if stdout, stderr, err := w.simpleExec(fmt.Sprintf(`echo "root:%v" | chpasswd`, password)); err != nil {
 			log.WithFields(log.Fields{
-				"user":   user,
+				"uid":    uid,
 				"stdout": stdout,
 				"stderr": stderr,
 			}).WithError(err).Error("Failed to set root password")
@@ -362,7 +380,7 @@ func (m *Manager) Create(user string, image string, password string, sshKey stri
 			if cmd != "" {
 				if stdout, stderr, err := w.simpleExec(cmd); err != nil {
 					log.WithFields(log.Fields{
-						"user":   user,
+						"uid":    uid,
 						"stdout": stdout,
 						"stderr": stderr,
 					}).WithError(err).Error("Failed to install sshd")
@@ -372,7 +390,7 @@ func (m *Manager) Create(user string, image string, password string, sshKey stri
 				cmd := fmt.Sprintf(`mkdir -p /root/.ssh && echo "%v" > /root/.ssh/authorized_keys`, sshKey)
 				if stdout, stderr, err := w.simpleExec(cmd); err != nil {
 					log.WithFields(log.Fields{
-						"user":   user,
+						"uid":    uid,
 						"stdout": stdout,
 						"stderr": stderr,
 					}).WithError(err).Error("Failed to store ssh public key")

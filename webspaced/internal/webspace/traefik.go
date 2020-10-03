@@ -2,6 +2,7 @@ package webspace
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/go-redis/redis/v7"
@@ -35,8 +36,9 @@ func (t *Traefik) ClearConfig(n string) error {
 			fmt.Sprintf("traefik/http/services/%v/loadbalancer/servers/0/url", n),
 			fmt.Sprintf("traefik/http/services/%v/loadbalancer/passhostheader", n),
 
-			fmt.Sprintf("traefik/http/middlewares/%v-boot/webspaceBoot/socket", n),
-			fmt.Sprintf("traefik/http/middlewares/%v-boot/webspaceBoot/user", n),
+			fmt.Sprintf("traefik/http/middlewares/%v-boot/webspaceBoot/url", n),
+			fmt.Sprintf("traefik/http/middlewares/%v-boot/webspaceBoot/iamToken", n),
+			fmt.Sprintf("traefik/http/middlewares/%v-boot/webspaceBoot/userID", n),
 			fmt.Sprintf("traefik/http/routers/%v/middlewares/0", n),
 
 			fmt.Sprintf("traefik/http/routers/%v/service", n),
@@ -63,8 +65,9 @@ func (t *Traefik) ClearConfig(n string) error {
 			fmt.Sprintf("traefik/tcp/routers/%v-https/tls/certresolver", n),
 			fmt.Sprintf("traefik/tcp/routers/%v-https/tls/passthrough", n),
 
-			fmt.Sprintf("traefik/tcp/routers/%v-https/webspaceboot/socket", n),
-			fmt.Sprintf("traefik/tcp/routers/%v-https/webspaceboot/user", n),
+			fmt.Sprintf("traefik/tcp/routers/%v-https/webspaceboot/url", n),
+			fmt.Sprintf("traefik/tcp/routers/%v-https/webspaceboot/iamToken", n),
+			fmt.Sprintf("traefik/tcp/routers/%v-https/webspaceboot/userID", n),
 		)
 
 		if len(t.config.Traefik.SANs) > 0 {
@@ -86,15 +89,25 @@ func (t *Traefik) ClearConfig(n string) error {
 
 // GenerateConfig generates new Traefik configuration for a webspace
 func (t *Traefik) GenerateConfig(ws *Webspace, addr string) error {
-	if addr == "" && t.config.Traefik.WebspacedSocket == "" {
+	if addr == "" && t.config.Traefik.WebspacedURL == "" {
 		// Traefik hooks (only used when webspaces aren't running) are disabled
 		return nil
 	}
 
 	n := ws.InstanceName()
 
-	rules := make([]string, len(ws.Domains))
-	for i, d := range ws.Domains {
+	user, err := ws.GetUser()
+	if err != nil {
+		return fmt.Errorf("failed to get user: %w", err)
+	}
+
+	domains, err := ws.GetDomains()
+	if err != nil {
+		return fmt.Errorf("failed to get webspace domains: %w", err)
+	}
+
+	rules := make([]string, len(domains))
+	for i, d := range domains {
 		rules[i] = fmt.Sprintf("Host(`%v`)", d)
 	}
 	rule := strings.Join(rules, " || ")
@@ -111,11 +124,16 @@ func (t *Traefik) GenerateConfig(ws *Webspace, addr string) error {
 			pipe.Set(fmt.Sprintf("traefik/http/services/%v/loadbalancer/passhostheader", n), true, 0)
 
 			pipe.Set(
-				fmt.Sprintf("traefik/http/middlewares/%v-boot/webspaceBoot/socket", n),
-				t.config.Traefik.WebspacedSocket,
+				fmt.Sprintf("traefik/http/middlewares/%v-boot/webspaceBoot/url", n),
+				t.config.Traefik.WebspacedURL,
 				0,
 			)
-			pipe.Set(fmt.Sprintf("traefik/http/middlewares/%v-boot/webspaceBoot/user", n), ws.User, 0)
+			pipe.Set(
+				fmt.Sprintf("traefik/http/middlewares/%v-boot/webspaceBoot/iamToken", n),
+				t.config.Traefik.IAMToken,
+				0,
+			)
+			pipe.Set(fmt.Sprintf("traefik/http/middlewares/%v-boot/webspaceBoot/userID", n), strconv.Itoa(ws.UserID), 0)
 			pipe.Set(fmt.Sprintf("traefik/http/routers/%v/middlewares/0", n), n+"-boot", 0)
 		}
 
@@ -128,14 +146,14 @@ func (t *Traefik) GenerateConfig(ws *Webspace, addr string) error {
 			// SSL termination
 			rt = "http"
 
-			if len(ws.Domains) > 1 {
-				log.WithField("user", ws.User).Warn("Using SSL termination with custom domains - these will be ignored")
+			if len(domains) > 1 {
+				log.WithField("user", user.Username).Warn("Using SSL termination with custom domains - these will be ignored")
 			}
 
 			pipe.Set(fmt.Sprintf("traefik/http/routers/%v-https/service", n), n, 0)
 			pipe.Set(
 				fmt.Sprintf("traefik/http/routers/%v-https/rule", n),
-				fmt.Sprintf("Host(`%v.%v`)", ws.User, t.config.Webspaces.Domain),
+				fmt.Sprintf("Host(`%v.%v`)", user.Username, t.config.Webspaces.Domain),
 				0,
 			)
 
@@ -154,12 +172,13 @@ func (t *Traefik) GenerateConfig(ws *Webspace, addr string) error {
 				)
 				pipe.Set(fmt.Sprintf("traefik/tcp/routers/%v-https/service", n), n, 0)
 			} else {
-				pipe.Set(fmt.Sprintf("traefik/tcp/routers/%v-https/webspaceboot/socket", n), t.config.BindSocket, 0)
-				pipe.Set(fmt.Sprintf("traefik/tcp/routers/%v-https/webspaceboot/user", n), ws.User, 0)
+				pipe.Set(fmt.Sprintf("traefik/tcp/routers/%v-https/webspaceboot/url", n), t.config.Traefik.WebspacedURL, 0)
+				pipe.Set(fmt.Sprintf("traefik/tcp/routers/%v-https/webspaceboot/iamToken", n), t.config.Traefik.IAMToken, 0)
+				pipe.Set(fmt.Sprintf("traefik/tcp/routers/%v-https/webspaceboot/userID", n), ws.UserID, 0)
 			}
 
-			sniRules := make([]string, len(ws.Domains))
-			for i, d := range ws.Domains {
+			sniRules := make([]string, len(domains))
+			for i, d := range domains {
 				sniRules[i] = fmt.Sprintf("HostSNI(`%v`)", d)
 			}
 			sniRule := strings.Join(sniRules, " || ")

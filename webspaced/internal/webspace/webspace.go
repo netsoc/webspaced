@@ -1,8 +1,8 @@
 package webspace
 
 import (
+	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -13,82 +13,65 @@ import (
 
 	"github.com/cenkalti/backoff/v4"
 	lxdApi "github.com/lxc/lxd/shared/api"
+	iam "github.com/netsoc/iam/client"
 	"github.com/netsoc/webspaced/internal/config"
+	"github.com/netsoc/webspaced/pkg/util"
 	log "github.com/sirupsen/logrus"
 )
 
 const lxdConfigKey = "user._webspaced"
 
-// ErrNotFound indicates that a resource was not found
-var ErrNotFound = errors.New("not found")
-
-// ErrExists indicates that a resource already exists
-var ErrExists = errors.New("already exists")
-
-// ErrUsed indicates that the requested resource is already in use by a webspace
-var ErrUsed = errors.New("used by a webspace")
-
-// ErrNotRunning indicates that a webspace is not running
-var ErrNotRunning = errors.New("not running")
-
-// ErrRunning indicates that a webspace is already running
-var ErrRunning = errors.New("already running")
-
-// ErrDomainUnverified indicates that the request domain could not be verified
-var ErrDomainUnverified = errors.New("verification failed")
-
-// ErrDefaultDomain indicates an attempt to remove the default domain
-var ErrDefaultDomain = errors.New("cannot remove the default domain")
-
-// ErrTooManyPorts indicates that too many port forwards are configured
-var ErrTooManyPorts = errors.New("port forward limit reached")
-
-// ErrBadPort indicates that the provided port is invalid
-var ErrBadPort = errors.New("invalid port")
-
-// ErrInterface indicates the default interface is missing
-var ErrInterface = errors.New("default network interface not present")
-
-// ErrAddress indicates the interface didn't have an IPv4 address
-var ErrAddress = errors.New("ipv4 address not found")
-
-// ErrBadValue indicates an invalid value for a config option
-var ErrBadValue = errors.New("invalid value for configuration option")
-
 // convertLXDError is a HACK: LXD doesn't seem to return a code we can use to determine the error...
 func convertLXDError(err error) error {
 	switch err.Error() {
 	case "not found", "No such object":
-		return ErrNotFound
+		return util.ErrGenericNotFound
 	case "Create instance: Add instance info to the database: This instance already exists":
-		return ErrExists
+		return util.ErrExists
 	case "The container is already stopped":
-		return ErrNotRunning
+		return util.ErrNotRunning
 	case "Common start logic: The container is already running":
-		return ErrRunning
+		return util.ErrRunning
 
 	default:
 		return err
 	}
 }
 
-var lxdEventUserRegexTpl = `^/1\.0/\S+/(\S+)%v$`
+var lxdEventUserRegexTpl = `^/1\.0/\S+/%vu(\d+)$`
 var lxdEventActionRegex = regexp.MustCompile(`^\S+-(\S+)$`)
-var lxdLogFilenameRegex = regexp.MustCompile(`/1.0/containers/\S+/logs/(\S+)`)
+var lxdLogFilenameRegex = regexp.MustCompile(`/1.0/instances/\S+/logs/(\S+)`)
 
 // Webspace represents a webspace with all of its configuration and state
 type Webspace struct {
 	manager *Manager
+	user    *iam.User
 
-	User    string                `json:"user"`
+	UserID  int                   `json:"user"`
 	Config  config.WebspaceConfig `json:"config"`
 	Domains []string              `json:"domains"`
 	Ports   map[uint16]uint16     `json:"ports"`
 }
 
+// GetUser gets the IAM user associated with this webspace
+func (w *Webspace) GetUser() (*iam.User, error) {
+	if w.user != nil {
+		return w.user, nil
+	}
+
+	ctx := context.WithValue(context.Background(), iam.ContextAccessToken, w.manager.config.IAM.Token)
+	user, _, err := w.manager.iam.UsersApi.GetUserByID(ctx, int32(w.UserID))
+	if err != nil {
+		return nil, err
+	}
+
+	w.user = &user
+	return w.user, err
+}
+
 func (w *Webspace) lxdConfig() (string, error) {
 	if w.Config.StartupDelay < 0 {
-		return "", ErrBadValue
+		return "", util.ErrBadValue
 	}
 
 	confJSON, err := json.Marshal(w)
@@ -148,7 +131,7 @@ func (w *Webspace) simpleExec(cmd string) (string, string, error) {
 
 // InstanceName uses the suffix to calculate the name of the instance
 func (w *Webspace) InstanceName() string {
-	return w.manager.lxdInstanceName(w.User)
+	return w.manager.lxdInstanceName(w.UserID)
 }
 
 // Delete deletes the webspace
@@ -229,6 +212,22 @@ func (w *Webspace) Save() error {
 	return nil
 }
 
+// GetDomains gets all domains (including the default one, which can change because of usernames!)
+func (w *Webspace) GetDomains() ([]string, error) {
+	domains := make([]string, len(w.Domains))
+	for i, d := range w.Domains {
+		domains[i] = d
+	}
+
+	user, err := w.GetUser()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user: %w", err)
+	}
+
+	domains = append([]string{fmt.Sprintf("%v.%v", user.Username, w.manager.config.Webspaces.Domain)}, domains...)
+	return domains, nil
+}
+
 // AddDomain verifies and adds a new domain
 func (w *Webspace) AddDomain(domain string) error {
 	records, err := net.LookupTXT(domain)
@@ -236,7 +235,7 @@ func (w *Webspace) AddDomain(domain string) error {
 		return fmt.Errorf("failed to lookup TXT records: %w", err)
 	}
 
-	correct := fmt.Sprintf("webspace:%v", w.User)
+	correct := fmt.Sprintf("webspace:%v", w.UserID)
 	verified := false
 	for _, r := range records {
 		if r == correct {
@@ -244,7 +243,7 @@ func (w *Webspace) AddDomain(domain string) error {
 		}
 	}
 	if !verified {
-		return ErrDomainUnverified
+		return util.ErrDomainUnverified
 	}
 
 	webspaces, err := w.manager.GetAll()
@@ -255,7 +254,7 @@ func (w *Webspace) AddDomain(domain string) error {
 	for _, w := range webspaces {
 		for _, d := range w.Domains {
 			if d == domain {
-				return ErrUsed
+				return util.ErrUsed
 			}
 		}
 	}
@@ -269,10 +268,6 @@ func (w *Webspace) AddDomain(domain string) error {
 
 // RemoveDomain removes an existing domain
 func (w *Webspace) RemoveDomain(domain string) error {
-	if domain == fmt.Sprintf("%v.%v", w.User, w.manager.config.Webspaces.Domain) {
-		return ErrDefaultDomain
-	}
-
 	for i, d := range w.Domains {
 		if d == domain {
 			e := len(w.Domains) - 1
@@ -283,20 +278,20 @@ func (w *Webspace) RemoveDomain(domain string) error {
 		}
 	}
 
-	return ErrNotFound
+	return util.ErrNotFound
 }
 
 // AddPort creates a port forwarding
 func (w *Webspace) AddPort(external uint16, internal uint16) (uint16, error) {
 	if len(w.Ports) == int(w.manager.config.Webspaces.Ports.Max) {
-		return 0, ErrTooManyPorts
+		return 0, util.ErrTooManyPorts
 	}
 	if internal == 0 {
-		return 0, fmt.Errorf("%w (internal port cannot be 0)", ErrBadPort)
+		return 0, fmt.Errorf("%w (internal port cannot be 0)", util.ErrBadPort)
 	}
 	if external != 0 &&
 		(external < w.manager.config.Webspaces.Ports.Start || external > w.manager.config.Webspaces.Ports.End) {
-		return 0, fmt.Errorf("%w (external port out of range %v-%v)", ErrBadPort,
+		return 0, fmt.Errorf("%w (external port out of range %v-%v)", util.ErrBadPort,
 			w.manager.config.Webspaces.Ports.Start, w.manager.config.Webspaces.Ports.End)
 	}
 
@@ -309,7 +304,7 @@ func (w *Webspace) AddPort(external uint16, internal uint16) (uint16, error) {
 	for _, w := range webspaces {
 		for e := range w.Ports {
 			if e == external {
-				return 0, ErrUsed
+				return 0, util.ErrUsed
 			}
 
 			if external == 0 {
@@ -341,7 +336,7 @@ func (w *Webspace) AddPort(external uint16, internal uint16) (uint16, error) {
 // RemovePort removes a port forwarding
 func (w *Webspace) RemovePort(external uint16) error {
 	if _, ok := w.Ports[external]; !ok {
-		return ErrNotFound
+		return util.ErrNotFound
 	}
 
 	delete(w.Ports, external)
@@ -362,7 +357,7 @@ func (w *Webspace) GetIP(state *lxdApi.InstanceState) (string, error) {
 
 	iface, ok := state.Network["eth0"]
 	if !ok {
-		return "", ErrInterface
+		return "", util.ErrInterface
 	}
 
 	var addr string
@@ -374,7 +369,7 @@ func (w *Webspace) GetIP(state *lxdApi.InstanceState) (string, error) {
 		addr = info.Address
 	}
 	if addr == "" {
-		return "", ErrAddress
+		return "", util.ErrAddress
 	}
 
 	return addr, nil
@@ -392,7 +387,7 @@ func (w *Webspace) AwaitIP() (string, error) {
 		return err
 	}, back, func(_ error, retry time.Duration) {
 		log.WithFields(log.Fields{
-			"user":  w.User,
+			"uid":   w.UserID,
 			"retry": retry,
 		}).Debug("Failed to get webspace IP")
 	}); err != nil {

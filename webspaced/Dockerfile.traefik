@@ -1,4 +1,4 @@
-FROM ghcr.io/netsoc/traefik AS traefik
+FROM ghcr.io/netsoc/traefik:latest AS traefik
 
 
 FROM alpine:3.12

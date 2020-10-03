@@ -9,6 +9,7 @@ services:
       - 'no'
     ports:
       - 127.0.0.1:6379:6379
+    network_mode: host
 
   traefik:
     image: ghcr.io/netsoc/webspaced/traefik:dev
@@ -22,10 +23,9 @@ services:
       - --api.dashboard=true
       - --accesslog=true
     environment:
-      - REDIS_HOST=127.0.0.1
+      - REDIS_HOST=localhost
     volumes:
       - ./traefik-static.yaml:/static.yaml:ro
-      - ./sockets:/run/webspaced
     network_mode: host
 
   app:
@@ -33,14 +33,17 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.dev
+    env_file: .env
     environment:
-      - LXD_SOCKET=/run/lxd.sock
-      - DEBUG=1
+      - WSD_LOG_LEVEL=debug
+      - WSD_IAM_URL=http://localhost:8080/v1
+      - WSD_IAM_ALLOW_INSECURE=true
+      - WSD_LXD_TLS_ALLOW_INSECURE=true
+      - WSD_LXD_TLS_CLIENT_CERT_FILE=/run/certs/client.crt
+      - WSD_LXD_TLS_CLIENT_KEY_FILE=/run/certs/client.key
+      - WSD_HTTP_LISTEN_ADDRESS=:8081
+      - WSD_TRAEFIK_WEBSPACED_URL=http://localhost:8081
     volumes:
       - .:/usr/local/lib/webspaced
-      - ./config.yaml:/etc/webspaced/config.yaml:ro
-      - ./sockets:/run/webspaced
-      # If you installed LXD via Snap, use the following instead!
-      #- /var/snap/lxd/common/lxd/unix.socket:/run/lxd.sock
-      - /var/lib/lxd/unix.socket:/run/lxd.sock
+      - ./certs:/run/certs:ro
     network_mode: host
