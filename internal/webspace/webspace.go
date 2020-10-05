@@ -268,6 +268,15 @@ func (w *Webspace) AddDomain(domain string) error {
 
 // RemoveDomain removes an existing domain
 func (w *Webspace) RemoveDomain(domain string) error {
+	u, err := w.GetUser()
+	if err != nil {
+		return fmt.Errorf("failed to get user: %w", err)
+	}
+
+	if domain == fmt.Sprintf("%v.%v", u.Username, w.manager.config.Webspaces.Domain) {
+		return util.ErrDefaultDomain
+	}
+
 	for i, d := range w.Domains {
 		if d == domain {
 			e := len(w.Domains) - 1
@@ -278,7 +287,7 @@ func (w *Webspace) RemoveDomain(domain string) error {
 		}
 	}
 
-	return util.ErrNotFound
+	return util.ErrGenericNotFound
 }
 
 // AddPort creates a port forwarding
@@ -336,7 +345,7 @@ func (w *Webspace) AddPort(external uint16, internal uint16) (uint16, error) {
 // RemovePort removes a port forwarding
 func (w *Webspace) RemovePort(external uint16) error {
 	if _, ok := w.Ports[external]; !ok {
-		return util.ErrNotFound
+		return util.ErrGenericNotFound
 	}
 
 	delete(w.Ports, external)
