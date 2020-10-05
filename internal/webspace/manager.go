@@ -337,13 +337,13 @@ func (m *Manager) Create(uid int, image string, password string, sshKey string) 
 	}
 	n := w.InstanceName()
 
-	source := lxdApi.InstanceSource{
-		Type: "image",
-	}
-	if util.IsSHA256(image) {
-		source.Fingerprint = image
-	} else {
-		source.Alias = image
+	if !util.IsSHA256(image) {
+		alias, _, err := m.lxd.GetImageAlias(image)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get image alias: %w", err)
+		}
+
+		image = alias.Target
 	}
 
 	lxdConf, err := w.lxdConfig()
@@ -352,9 +352,12 @@ func (m *Manager) Create(uid int, image string, password string, sshKey string) 
 	}
 
 	op, err := m.lxd.CreateInstance(lxdApi.InstancesPost{
-		Type:   lxdApi.InstanceTypeContainer,
-		Name:   n,
-		Source: source,
+		Type: lxdApi.InstanceTypeContainer,
+		Name: n,
+		Source: lxdApi.InstanceSource{
+			Type:        "image",
+			Fingerprint: image,
+		},
 		InstancePut: lxdApi.InstancePut{
 			Ephemeral: false,
 			Profiles:  []string{m.config.Webspaces.LXDProfile},
