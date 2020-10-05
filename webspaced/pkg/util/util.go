@@ -5,9 +5,14 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"regexp"
 
 	iam "github.com/netsoc/iam/client"
 	log "github.com/sirupsen/logrus"
+)
+
+var (
+	sha256Regex = regexp.MustCompile(`^[A-Fa-f0-9]{64}$`)
 )
 
 // JSONResponse Sends a JSON payload in response to a HTTP request
@@ -57,4 +62,9 @@ func ParseJSONBody(v interface{}, w http.ResponseWriter, r *http.Request) error 
 	}
 
 	return nil
+}
+
+// IsSHA256 determines if a string represents an SHA256 hash
+func IsSHA256(s string) bool {
+	return sha256Regex.MatchString(s)
 }

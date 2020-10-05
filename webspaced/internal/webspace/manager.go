@@ -337,17 +337,24 @@ func (m *Manager) Create(uid int, image string, password string, sshKey string) 
 	}
 	n := w.InstanceName()
 
+	source := lxdApi.InstanceSource{
+		Type: "image",
+	}
+	if util.IsSHA256(image) {
+		source.Fingerprint = image
+	} else {
+		source.Alias = image
+	}
+
 	lxdConf, err := w.lxdConfig()
 	if err != nil {
 		return nil, err
 	}
+
 	op, err := m.lxd.CreateInstance(lxdApi.InstancesPost{
-		Type: lxdApi.InstanceTypeContainer,
-		Name: n,
-		Source: lxdApi.InstanceSource{
-			Type:        "image",
-			Fingerprint: image,
-		},
+		Type:   lxdApi.InstanceTypeContainer,
+		Name:   n,
+		Source: source,
 		InstancePut: lxdApi.InstancePut{
 			Ephemeral: false,
 			Profiles:  []string{m.config.Webspaces.LXDProfile},
