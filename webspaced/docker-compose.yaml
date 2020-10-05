@@ -44,10 +44,11 @@ services:
       - WSD_LXD_TLS_CLIENT_CERT_FILE=/run/certs/client.crt
       - WSD_LXD_TLS_CLIENT_KEY_FILE=/run/certs/client.key
       - WSD_HTTP_LISTEN_ADDRESS=:8081
+      - WSD_TRAEFIK_HTTPS_ENTRYPOINT=websecure
       - WSD_TRAEFIK_WEBSPACED_URL=http://172.19.0.1:8081
       - WSD_TRAEFIK_PROVIDER=kubernetes
       - WSD_TRAEFIK_KUBERNETES_NAMESPACE=webspace-ng
-      - WSD_TRAEFIK_HTTPS_ENTRYPOINT=websecure
+      - WSD_TRAEFIK_KUBERNETES_CLUSTER_ISSUER=letsencrypt-staging
       - KUBECONFIG=/run/config/kubeconfig.yaml
     volumes:
       - .:/usr/local/lib/webspaced

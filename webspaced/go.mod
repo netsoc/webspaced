@@ -13,6 +13,7 @@ require (
 	github.com/gorilla/handlers v1.5.1
 	github.com/gorilla/mux v1.8.0
 	github.com/imdario/mergo v0.3.11 // indirect
+	github.com/jetstack/cert-manager v1.0.2
 	github.com/juju/webbrowser v1.0.0 // indirect
 	github.com/lxc/lxd v0.0.0-20201004191602-826df8474fb3
 	github.com/magiconair/properties v1.8.4 // indirect
@@ -39,7 +40,7 @@ require (
 )
 
 // Netsoc Traefik
-replace github.com/traefik/traefik/v2 => github.com/netsoc/traefik/v2 v2.1.4-0.20201005002807-cf5b01694d4b
+replace github.com/traefik/traefik/v2 => github.com/netsoc/traefik/v2 v2.3.2-0.20201005105929-66099221d9de
 
 // Containous forks
 replace (

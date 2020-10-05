@@ -6,19 +6,27 @@ import (
 	"os"
 	"strings"
 
-	"github.com/netsoc/webspaced/internal/config"
 	log "github.com/sirupsen/logrus"
-	"github.com/traefik/traefik/v2/pkg/config/dynamic"
-	traefikClientset "github.com/traefik/traefik/v2/pkg/provider/kubernetes/crd/generated/clientset/versioned"
-	traefikTyped "github.com/traefik/traefik/v2/pkg/provider/kubernetes/crd/generated/clientset/versioned/typed/traefik/v1alpha1"
-	traefikCRD "github.com/traefik/traefik/v2/pkg/provider/kubernetes/crd/traefik/v1alpha1"
-	traefikTypes "github.com/traefik/traefik/v2/pkg/types"
+
 	k8sCore "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	k8sMeta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	k8sTypedCore "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/clientcmd"
+
+	traefikConf "github.com/traefik/traefik/v2/pkg/config/dynamic"
+	traefikClientset "github.com/traefik/traefik/v2/pkg/provider/kubernetes/crd/generated/clientset/versioned"
+	traefikTyped "github.com/traefik/traefik/v2/pkg/provider/kubernetes/crd/generated/clientset/versioned/typed/traefik/v1alpha1"
+	traefikCRD "github.com/traefik/traefik/v2/pkg/provider/kubernetes/crd/traefik/v1alpha1"
+	traefikTypes "github.com/traefik/traefik/v2/pkg/types"
+
+	cmCRD "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1"
+	cmMeta "github.com/jetstack/cert-manager/pkg/apis/meta/v1"
+	cmClientset "github.com/jetstack/cert-manager/pkg/client/clientset/versioned"
+	cmTyped "github.com/jetstack/cert-manager/pkg/client/clientset/versioned/typed/certmanager/v1"
+
+	"github.com/netsoc/webspaced/internal/config"
 )
 
 var k8sLabels = map[string]string{
@@ -35,6 +43,8 @@ type TraefikKubernetes struct {
 	mwAPI    traefikTyped.MiddlewareInterface
 	irAPI    traefikTyped.IngressRouteInterface
 	irTCPAPI traefikTyped.IngressRouteTCPInterface
+
+	certManagerAPI cmTyped.CertificateInterface
 }
 
 // NewTraefikKubernetes manages webspace configuration for Traefik via Kubernetes resources
@@ -54,6 +64,11 @@ func NewTraefikKubernetes(cfg *config.Config) (Traefik, error) {
 		return nil, fmt.Errorf("failed to create Traefik Kubernetes client: %w", err)
 	}
 
+	cmK8s, err := cmClientset.NewForConfig(k8sConf)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create cert-manager Kubernetes client: %w", err)
+	}
+
 	return &TraefikKubernetes{
 		config: cfg,
 
@@ -63,6 +78,8 @@ func NewTraefikKubernetes(cfg *config.Config) (Traefik, error) {
 		mwAPI:    traefikK8s.TraefikV1alpha1().Middlewares(cfg.Traefik.Kubernetes.Namespace),
 		irAPI:    traefikK8s.TraefikV1alpha1().IngressRoutes(cfg.Traefik.Kubernetes.Namespace),
 		irTCPAPI: traefikK8s.TraefikV1alpha1().IngressRouteTCPs(cfg.Traefik.Kubernetes.Namespace),
+
+		certManagerAPI: cmK8s.CertmanagerV1().Certificates(cfg.Traefik.Kubernetes.Namespace),
 	}, nil
 }
 
@@ -92,6 +109,14 @@ func (t *TraefikKubernetes) ClearConfig(n string) error {
 		}
 	} else if err := t.mwAPI.Delete(ctx, n+"-boot", k8sMeta.DeleteOptions{}); err != nil {
 		return fmt.Errorf("failed to delete Traefik Middleware CRD: %w", err)
+	}
+
+	if _, err := t.certManagerAPI.Get(ctx, "tls-"+n, k8sMeta.GetOptions{}); err != nil {
+		if !k8sErrors.IsNotFound(err) {
+			return fmt.Errorf("failed to get cert-manager Certificate: %w", err)
+		}
+	} else if err := t.certManagerAPI.Delete(ctx, "tls-"+n, k8sMeta.DeleteOptions{}); err != nil {
+		return fmt.Errorf("failed to delete cert-manager Certificate: %w", err)
 	}
 
 	if _, err := t.svcAPI.Get(ctx, n, k8sMeta.GetOptions{}); err != nil {
@@ -132,7 +157,7 @@ func (t *TraefikKubernetes) GenerateConfig(ws *Webspace, addr string) error {
 		return fmt.Errorf("failed to get webspace domains: %w", err)
 	}
 
-	wsb := dynamic.WebspaceBoot{
+	wsb := traefikConf.WebspaceBoot{
 		URL:      t.config.Traefik.WebspacedURL,
 		IAMToken: t.config.Traefik.IAMToken,
 		UserID:   ws.UserID,
@@ -192,6 +217,7 @@ func (t *TraefikKubernetes) GenerateConfig(ws *Webspace, addr string) error {
 
 	if !ws.Config.SNIPassthrough {
 		var tls traefikCRD.TLS
+		// ws.Domains only contains custom domains
 		if len(ws.Domains) == 0 || t.config.Traefik.Kubernetes.ClusterIssuer == "" {
 			if t.config.Traefik.Kubernetes.ClusterIssuer == "" {
 				log.WithField("user", user.Username).Warn("No ClusterIssuer is configured, ignoring custom domains")
@@ -207,8 +233,25 @@ func (t *TraefikKubernetes) GenerateConfig(ws *Webspace, addr string) error {
 				},
 			}
 		} else if len(ws.Domains) > 0 {
-			// TODO: Create cert-manager Certificate
 			s := "tls-" + n
+
+			crt := cmCRD.Certificate{
+				ObjectMeta: k8sMeta.ObjectMeta{
+					Name:   s,
+					Labels: k8sLabels,
+				},
+				Spec: cmCRD.CertificateSpec{
+					SecretName: s,
+					DNSNames:   domains,
+					IssuerRef: cmMeta.ObjectReference{
+						Kind: "ClusterIssuer",
+						Name: t.config.Traefik.Kubernetes.ClusterIssuer,
+					},
+				},
+			}
+			if _, err := t.certManagerAPI.Create(ctx, &crt, k8sMeta.CreateOptions{}); err != nil {
+				return fmt.Errorf("failed to create cert-manager Certificate: %w", err)
+			}
 
 			tls = traefikCRD.TLS{
 				SecretName: s,
