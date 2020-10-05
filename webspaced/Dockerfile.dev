@@ -5,8 +5,11 @@ RUN install -d -m 777 /.cache
 WORKDIR /usr/local/lib/webspaced
 VOLUME /usr/local/lib/webspaced
 
-COPY tools.go ./
+COPY go.mod go.sum tools.go ./
 RUN cat tools.go | sed -nr 's|^\t_ "(.+)"$|\1|p' | xargs -tI % go get %
 
-CMD ["CompileDaemon", "-exclude-dir=.git", "-build=go build -o bin/webspaced ./cmd/...", "-command=bin/webspaced", \
+COPY build.dev.sh /usr/local/bin/build.sh
+CMD ["CompileDaemon", "-exclude-dir=.git", "-exclude-dir=data", \
+    "-exclude-dir=internal/data", \
+    "-build=build.sh", "-command=bin/webspaced", \
     "-graceful-kill"]

@@ -6,11 +6,14 @@ import (
 	"fmt"
 	"net/http"
 
+	httpswagger "github.com/devplayer0/http-swagger"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	lxd "github.com/lxc/lxd/client"
 	iam "github.com/netsoc/iam/client"
+
 	"github.com/netsoc/webspaced/internal/config"
+	"github.com/netsoc/webspaced/internal/data"
 	"github.com/netsoc/webspaced/internal/webspace"
 	"github.com/netsoc/webspaced/pkg/util"
 )
@@ -83,6 +86,12 @@ func NewServer(config config.Config) *Server {
 	internalWsOpRouter := r.PathPrefix("/internal/{username}").Subrouter()
 	internalWsOpRouter.Use(adminAuthM.Middleware, s.getWebspaceMiddleware)
 	internalWsOpRouter.HandleFunc("/ensure-started", s.internalAPIEnsureStarted).Methods("POST")
+
+	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(data.AssetFile())))
+	r.PathPrefix("/swagger/").Handler(httpswagger.Handler(
+		httpswagger.URL("/static/api.yaml"),
+		httpswagger.PersistAuth(true),
+	))
 
 	r.NotFoundHandler = http.HandlerFunc(apiNotFound)
 	r.MethodNotAllowedHandler = http.HandlerFunc(apiMethodNotAllowed)

@@ -4,10 +4,12 @@ go 1.15
 
 require (
 	github.com/cenkalti/backoff/v4 v4.0.2
+	github.com/devplayer0/http-swagger v0.0.0-20200916205217-5f599a45ac7b
 	github.com/dgrijalva/jwt-go/v4 v4.0.0-preview1
 	github.com/flosch/pongo2 v0.0.0-20200913210552-0d938eb266f3 // indirect
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/githubnemo/CompileDaemon v1.2.1
+	github.com/go-bindata/go-bindata/v3 v3.1.3
 	github.com/go-redis/redis/v7 v7.4.0
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/gorilla/handlers v1.5.1
@@ -15,10 +17,10 @@ require (
 	github.com/imdario/mergo v0.3.11 // indirect
 	github.com/jetstack/cert-manager v1.0.2
 	github.com/juju/webbrowser v1.0.0 // indirect
-	github.com/lxc/lxd v0.0.0-20201004191602-826df8474fb3
+	github.com/lxc/lxd v0.0.0-20201005111517-3f2b50ee46c9
 	github.com/magiconair/properties v1.8.4 // indirect
 	github.com/mitchellh/mapstructure v1.3.3
-	github.com/netsoc/iam/client v1.0.8
+	github.com/netsoc/iam/client v1.0.9
 	github.com/pelletier/go-toml v1.8.1 // indirect
 	github.com/rogpeppe/fastuuid v1.2.0 // indirect
 	github.com/sirupsen/logrus v1.7.0

@@ -3,3 +3,5 @@
 /config.yaml
 /.env
 /certs/
+/internal/data/*
+!/internal/data/.gitkeep

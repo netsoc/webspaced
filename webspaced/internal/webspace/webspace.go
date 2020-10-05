@@ -235,7 +235,7 @@ func (w *Webspace) AddDomain(domain string) error {
 		return fmt.Errorf("failed to lookup TXT records: %w", err)
 	}
 
-	correct := fmt.Sprintf("webspace:%v", w.UserID)
+	correct := fmt.Sprintf("webspace:id:%v", w.UserID)
 	verified := false
 	for _, r := range records {
 		if r == correct {

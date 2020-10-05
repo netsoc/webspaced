@@ -1,0 +1,870 @@
+openapi: '3.0.3'
+info:
+  version: '1.0.0'
+  title: Netsoc webspaced
+  description: >
+    API for managing next-gen webspaces.
+
+servers:
+  - url: https://webspaced.netsoc.ie/v1
+  - url: https://webspaced.staging.netsoc.ie/v1
+  - url: http://localhost:8081/v1
+
+components:
+  securitySchemes:
+    jwt:
+      $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/securitySchemes/jwt'
+    jwt_admin:
+      $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/securitySchemes/jwt_admin'
+
+  parameters:
+    Domain:
+      name: domain
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/Domain'
+    ExternalPort:
+      name: ePort
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/Port'
+    InternalPort:
+      name: iPort
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/Port'
+
+  responses:
+    InternalError:
+      description: General server error
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFoundError:
+      description: Resource does not exist (e.g. user, webspace)
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ValidationError:
+      description: Validation error (e.g. Required field missing)
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ConflictError:
+      description: Webspace for username already exists / is already running
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  schemas:
+    Error:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          description: Message explaining the error
+
+    ImageAlias:
+      type: object
+      description: LXD image alias
+      properties:
+        name:
+          type: string
+          example: alpine
+        description:
+          type: string
+          example: 'Alpine 3.11 amd64 (20201004_13:00)'
+    Image:
+      type: object
+      required:
+        - aliases
+        - fingerprint
+        - properties
+        - size
+      description: >
+        LXD image (summarised version of
+        https://linuxcontainers.org/lxd/docs/master/rest-api#10imagesfingerprint)
+      properties:
+        aliases:
+          type: array
+          items:
+            $ref: '#/components/schemas/ImageAlias'
+        fingerprint:
+          type: string
+          description: SHA-256 hash of the image
+          example: 49189fc1b5e04a3e26ee17ad22188f397fbdb073bbbdd2c0371ddf98dbd6b81c
+        properties:
+          type: object
+          additionalProperties:
+            type: string
+          description: Arbitrary properties
+          example:
+            architecture: amd64
+            description: Alpine 3.11 amd64 (20201004_13:00)
+            os: Alpine
+            release: "3.11"
+            serial: "20201004_13:00"
+            type: squashfs
+        size:
+          type: integer
+          format: int64
+          description: Size in bytes
+          example: 2528108
+
+    Config:
+      type: object
+      description: Webspace configuration
+      properties:
+        startupDelay:
+          type: number
+          format: double
+          description: >
+            How many seconds to delay incoming connections to a webspace while starting the container
+          default: 3.0
+          example: 5.0
+        httpPort:
+          type: integer
+          format: int32
+          description: >
+            Incoming SSL-terminated HTTP requests (and SNI passthrough HTTPS connections) will be
+            forwarded to this port
+          default: 80
+          example: 8080
+        sniPassthrough:
+          type: boolean
+          description: >
+            If true, SSL termination will be disabled and HTTPS connections will forwarded directly
+          default: false
+
+    Domain:
+      type: string
+      description: Custom domain
+      example: example.com
+    Domains:
+      type: array
+      items:
+        $ref: '#/components/schemas/Domain'
+      description: List of webspace custom domains
+
+    Port:
+      type: integer
+      format: int32
+      description: Network port
+      example: 8080
+    Ports:
+      type: object
+      additionalProperties:
+        $ref: '#/components/schemas/Port'
+      description: Mapping of external ports to internal container ports (port forwarding)
+      example:
+        '60022': 22
+        '55565': 25565
+
+    Webspace:
+      type: object
+      description: Netsoc webspace object
+      properties:
+        user:
+          $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/schemas/UserID'
+        config:
+          $ref: '#/components/schemas/Config'
+        domains:
+          $ref: '#/components/schemas/Domains'
+        ports:
+          $ref: '#/components/schemas/Ports'
+
+    Usage:
+      type: object
+      required:
+        - cpu
+        - disks
+        - memory
+        - processes
+      description: Website resource usage
+      properties:
+        cpu:
+          type: integer
+          format: int64
+          description: CPU time
+          example: 685502875
+        disks:
+          type: object
+          additionalProperties:
+            type: integer
+            format: int64
+            description: Disk usage in bytes
+          example:
+            root: 16777216
+        memory:
+          type: integer
+          format: int64
+          description: Memory usage in bytes
+          example: 10452992
+        processes:
+          type: integer
+          format: int64
+          description: Number of processes
+          example: 8
+    InterfaceCounters:
+      type: object
+      required:
+        - bytesReceived
+        - bytesSent
+        - packetsReceived
+        - packetsSent
+      description: Counters for a network interface
+      properties:
+        bytesReceived:
+          type: integer
+          format: int64
+          example: 46897
+        bytesSent:
+          type: integer
+          format: int64
+          example: 9910
+        packetsReceived:
+          type: integer
+          format: int64
+          example: 122
+        packetsSent:
+          type: integer
+          format: int64
+          example: 46
+    InterfaceAddress:
+      type: object
+      required:
+        - family
+        - address
+        - netmask
+      description: Network interface address
+      properties:
+        family:
+          type: string
+          default: inet
+        address:
+          type: string
+          example: '10.233.0.143'
+        netmask:
+          type: string
+          example: '24'
+        scope:
+          type: string
+          example: global
+    NetworkInterface:
+      type: object
+      required:
+        - mac
+        - mtu
+        - state
+        - counters
+        - addresses
+      description: Webspace network interface status
+      properties:
+        mac:
+          type: string
+          description: MAC address
+          example: '00:16:3e:34:9a:d4'
+        mtu:
+          type: integer
+          default: 1500
+        state:
+          type: string
+          default: up
+        counters:
+          $ref: '#/components/schemas/InterfaceCounters'
+        addresses:
+          type: array
+          items:
+            $ref: '#/components/schemas/InterfaceAddress'
+    State:
+      type: object
+      required:
+        - running
+        - usage
+        - networkInterfaces
+      description: Webspace state
+      properties:
+        running:
+          type: boolean
+          default: false
+          example: true
+        usage:
+          $ref: '#/components/schemas/Usage'
+        networkInterfaces:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/NetworkInterface'
+          example:
+            eth0:
+              mac: '00:16:3e:34:9a:d4'
+              mtu: 1500
+              state: up
+              counters:
+                bytesReceived: 46897
+                bytesSent: 9910
+                packetsReceived: 122
+                packetsSent: 46
+              addresses:
+                - family: inet
+                  address: 10.233.0.143
+                  netmask: '24'
+                  scope: global
+                - family: inet6
+                  address: 'fd42:7373:3d88:e37a:216:3eff:fe34:9ad4'
+                  netmask: '64'
+                  scope: global
+                - family: inet6
+                  address: 'fe80::216:3eff:fe34:9ad4'
+                  netmask: '64'
+                  scope: link
+
+    InitRequest:
+      type: object
+      required:
+        - image
+      properties:
+        image:
+          type: string
+          description: Image alias or fingerprint
+          example: alpine
+        password:
+          type: string
+          description: Password for root user
+          example: hunter2
+        sshKey:
+          type: string
+          description: SSH key for root user
+
+    AddRandomPortResponse:
+      type: object
+      required:
+        - ePort
+      properties:
+        ePort:
+          $ref: '#/components/schemas/Port'
+
+paths:
+  /images:
+    get:
+      summary: List images
+      operationId: getImages
+      tags: [images]
+      responses:
+        '200':
+          description: An array of images
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Image'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /webspace/{username}:
+    get:
+      summary: Retrieve all webspace information
+      operationId: get
+      tags: [config]
+      parameters:
+        - $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/parameters/UsernameOrSelf'
+      security:
+        - jwt: []
+        - jwt_admin: []
+      description: >
+        Retrieve all information about a webspace (except for its current state)
+      responses:
+        '200':
+          description: Webspace information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Webspace'
+        '401':
+          $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/responses/AuthError'
+        '403':
+          $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/responses/AdminError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      summary: Initialize webspace
+      operationId: create
+      tags: [config]
+      parameters:
+        - $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/parameters/UsernameOrSelf'
+      security:
+        - jwt: []
+        - jwt_admin: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InitRequest'
+            examples:
+              simple:
+                summary: Simple example with only image
+                value:
+                  image: alpine
+              login:
+                summary: More advanced example with root password and SSH key
+                value:
+                  image: alpine
+                  password: hunter2
+                  sshKey: "ssh-rsa
+                    AAAAB3NzaC1yc2EAAAADAQABAAABAQC+kCHXqtznkT9IBN5WxZHmXI97k3Bu\
+                    mT+N4lyHWMo0pykpACCOcGw52EXxQveNqgcwcRUgamL9A2JTE//WRf3O4nBo\
+                    feTRNKcRxTjRoUVIt/F0xbf09yWBqJOXZ8rqLkXhRvSpr1TCUZtYVp5iLtpE\
+                    Rp622OMIqHSwa6HlxBqsCFkBeq1bRyNtYK/IaQAuBPW9MNeFriGqA0Vq078c\
+                    cXp+JINxJbr+ZJybVg6PVqnMD+PgGMZQLkoWjwjH3vcJZZt584UPtrXKpNZu\
+                    Ky6dcMCb2U+O9NOaO66168sBVuK0kZHh51nJ7ZH38VLGiBipRgIQ1fzic3Nc\
+                    n6GC9ko3/OwT"
+      responses:
+        '201':
+          description: New webspace information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Webspace'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/responses/AuthError'
+        '403':
+          $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/responses/AdminError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      summary: Destroy webspace
+      operationId: delete
+      tags: [config]
+      parameters:
+        - $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/parameters/UsernameOrSelf'
+      security:
+        - jwt: []
+        - jwt_admin: []
+      responses:
+        '204':
+          description: No content
+        '401':
+          $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/responses/AuthError'
+        '403':
+          $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/responses/AdminError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /webspace/{username}/config:
+    get:
+      summary: Retrieve webspace configuration
+      operationId: getConfig
+      tags: [config]
+      parameters:
+        - $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/parameters/UsernameOrSelf'
+      security:
+        - jwt: []
+        - jwt_admin: []
+      responses:
+        '200':
+          description: Webspace configuration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Config'
+        '401':
+          $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/responses/AuthError'
+        '403':
+          $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/responses/AdminError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      summary: Change webspace config options
+      operationId: updateConfig
+      tags: [config]
+      parameters:
+        - $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/parameters/UsernameOrSelf'
+      security:
+        - jwt: []
+        - jwt_admin: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Config'
+      responses:
+        '200':
+          description: Old config values
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Config'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/responses/AuthError'
+        '403':
+          $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/responses/AdminError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /webspace/{username}/state:
+    get:
+      summary: Retrieve webspace state
+      operationId: getState
+      tags: [state]
+      parameters:
+        - $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/parameters/UsernameOrSelf'
+      security:
+        - jwt: []
+        - jwt_admin: []
+      description: >
+        Retrieve webspace state
+      responses:
+        '200':
+          description: Webspace state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/State'
+              examples:
+                running:
+                  description: Running
+                  value:
+                    running: true
+                    usage:
+                      cpu: 685502875
+                      disks: {}
+                      memory: 10452992
+                      processes: 8
+                    networkInterfaces:
+                      eth0:
+                        mac: '00:16:3e:34:9a:d4'
+                        mtu: 1500
+                        state: up
+                        counters:
+                          bytesReceived: 46897
+                          bytesSent: 9910
+                          packetsReceived: 122
+                          packetsSent: 46
+                        addresses:
+                          - family: inet
+                            address: '10.233.0.143'
+                            netmask: '24'
+                            scope: global
+                          - family: inet6
+                            address: 'fd42:7373:3d88:e37a:216:3eff:fe34:9ad4'
+                            netmask: '64'
+                            scope: global
+                          - family: inet6
+                            address: 'fe80::216:3eff:fe34:9ad4'
+                            netmask: '64'
+                            scope: link
+                notRunning:
+                  description: Not running
+                  value:
+                    running: false
+                    usage:
+                      cpu: 0
+                      disks: {}
+                      memory: 0
+                      processes: 0
+                    networkInterfaces: {}
+        '401':
+          $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/responses/AuthError'
+        '403':
+          $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/responses/AdminError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      summary: Start webspace container
+      operationId: start
+      tags: [state]
+      parameters:
+        - $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/parameters/UsernameOrSelf'
+      security:
+        - jwt: []
+        - jwt_admin: []
+      responses:
+        '204':
+          description: No content
+        '401':
+          $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/responses/AuthError'
+        '403':
+          $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/responses/AdminError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    put:
+      summary: Reboot webspace container
+      operationId: reboot
+      tags: [state]
+      parameters:
+        - $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/parameters/UsernameOrSelf'
+      security:
+        - jwt: []
+        - jwt_admin: []
+      responses:
+        '204':
+          description: No content
+        '401':
+          $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/responses/AuthError'
+        '403':
+          $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/responses/AdminError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      summary: Shut down webspace container
+      operationId: shutdown
+      tags: [state]
+      parameters:
+        - $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/parameters/UsernameOrSelf'
+      security:
+        - jwt: []
+        - jwt_admin: []
+      responses:
+        '204':
+          description: No content
+        '401':
+          $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/responses/AuthError'
+        '403':
+          $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/responses/AdminError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /webspace/{username}/domains:
+    get:
+      summary: Retrieve webspace domains
+      operationId: getDomains
+      tags: [domains]
+      parameters:
+        - $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/parameters/UsernameOrSelf'
+      security:
+        - jwt: []
+        - jwt_admin: []
+      responses:
+        '200':
+          description: Webspace domains
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Domains'
+        '401':
+          $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/responses/AuthError'
+        '403':
+          $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/responses/AdminError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /webspace/{username}/domains/{domain}:
+    post:
+      summary: Add custom domain
+      operationId: addDomain
+      tags: [domains]
+      parameters:
+        - $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/parameters/UsernameOrSelf'
+        - $ref: '#/components/parameters/Domain'
+      security:
+        - jwt: []
+        - jwt_admin: []
+      description: >
+        Domain will be verified by looking for a `TXT` record of the format `webspace:id:<user id>`
+      responses:
+        '201':
+          description: No content
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/responses/AuthError'
+        '403':
+          $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/responses/AdminError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      summary: Delete custom domain
+      operationId: removeDomain
+      tags: [domains]
+      parameters:
+        - $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/parameters/UsernameOrSelf'
+        - $ref: '#/components/parameters/Domain'
+      security:
+        - jwt: []
+        - jwt_admin: []
+      responses:
+        '204':
+          description: No content
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/responses/AuthError'
+        '403':
+          $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/responses/AdminError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /webspace/{username}/ports:
+    get:
+      summary: Retrieve webspace port forwards
+      operationId: getPorts
+      tags: [ports]
+      parameters:
+        - $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/parameters/UsernameOrSelf'
+      security:
+        - jwt: []
+        - jwt_admin: []
+      responses:
+        '200':
+          description: Webspace port forwards
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ports'
+        '401':
+          $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/responses/AuthError'
+        '403':
+          $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/responses/AdminError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /webspace/{username}/ports/{ePort}/{iPort}:
+    post:
+      summary: Add port forward
+      operationId: addPort
+      tags: [ports]
+      parameters:
+        - $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/parameters/UsernameOrSelf'
+        - $ref: '#/components/parameters/ExternalPort'
+        - $ref: '#/components/parameters/InternalPort'
+      security:
+        - jwt: []
+        - jwt_admin: []
+      responses:
+        '201':
+          description: No content
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/responses/AuthError'
+        '403':
+          $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/responses/AdminError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /webspace/{username}/ports/{iPort}:
+    post:
+      summary: Add random port forward
+      operationId: addRandomPort
+      tags: [ports]
+      parameters:
+        - $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/parameters/UsernameOrSelf'
+        - $ref: '#/components/parameters/InternalPort'
+      security:
+        - jwt: []
+        - jwt_admin: []
+      description: Add port forward from random free port to internal port
+      responses:
+        '201':
+          description: Random external port
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddRandomPortResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/responses/AuthError'
+        '403':
+          $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/responses/AdminError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /webspace/{username}/ports/{ePort}:
+    delete:
+      summary: Delete port forward
+      operationId: removePort
+      tags: [ports]
+      parameters:
+        - $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/parameters/UsernameOrSelf'
+        - $ref: '#/components/parameters/ExternalPort'
+      security:
+        - jwt: []
+        - jwt_admin: []
+      responses:
+        '204':
+          description: No content
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/responses/AuthError'
+        '403':
+          $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/responses/AdminError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /webspace/{username}/console:
+    get:
+      summary: Retrieve webspace console log
+      operationId: getLog
+      tags: [console]
+      parameters:
+        - $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/parameters/UsernameOrSelf'
+      security:
+        - jwt: []
+        - jwt_admin: []
+      responses:
+        '200':
+          description: Console log
+          content:
+            text/plain: {}
+        '401':
+          $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/responses/AuthError'
+        '403':
+          $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/responses/AdminError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalError'
