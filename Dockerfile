@@ -8,6 +8,7 @@ RUN go mod download
 COPY tools.go ./
 RUN cat tools.go | sed -nr 's|^\t_ "(.+)"$|\1|p' | xargs -tI % go get %
 
+COPY static/ ./static/
 COPY cmd/ ./cmd/
 COPY pkg/ ./pkg/
 COPY internal/ ./internal/
