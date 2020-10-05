@@ -49,6 +49,7 @@ services:
       - WSD_TRAEFIK_PROVIDER=kubernetes
       - WSD_TRAEFIK_KUBERNETES_NAMESPACE=webspace-ng
       - WSD_TRAEFIK_KUBERNETES_CLUSTER_ISSUER=letsencrypt-staging
+      - WSD_WEBSPACES_PORTS_KUBERNETES_SERVICE=webspaced
       - KUBECONFIG=/run/config/kubeconfig.yaml
     volumes:
       - .:/usr/local/lib/webspaced

@@ -84,12 +84,10 @@ type Config struct {
 
 			AllowInsecure bool `mapstructure:"allow_insecure"`
 		}
-
-		Network string
 	}
 
 	Webspaces struct {
-		Profile         string
+		LXDProfile      string         `mapstructure:"lxd_profile"`
 		InstancePrefix  string         `mapstructure:"instance_prefix"`
 		Domain          string         `mapstructure:"domain"`
 		ConfigDefaults  WebspaceConfig `mapstructure:"config_defaults"`
@@ -100,6 +98,8 @@ type Config struct {
 			Start uint16
 			End   uint16
 			Max   uint16
+
+			KubernetesService string `mapstructure:"kubernetes_service"`
 		}
 	}
 

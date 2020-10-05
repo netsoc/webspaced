@@ -26,8 +26,6 @@ func init() {
 	viper.SetDefault("iam.allow_insecure", false)
 
 	viper.SetDefault("lxd.url", "https://localhost")
-	viper.SetDefault("lxd.network", "lxdbr0")
-
 	viper.SetDefault("lxd.tls.ca", "")
 	viper.SetDefault("lxd.tls.ca_file", "")
 	viper.SetDefault("lxd.tls.server_cert", "")
@@ -40,7 +38,7 @@ func init() {
 	viper.SetDefault("lxd.tls.trust_password_file", "")
 	viper.SetDefault("lxd.tls.allow_insecure", false)
 
-	viper.SetDefault("webspaces.profile", "webspace")
+	viper.SetDefault("webspaces.lxd_profile", "webspace")
 	viper.SetDefault("webspaces.instance_prefix", "ws-")
 	viper.SetDefault("webspaces.domain", "ng.localhost")
 	viper.SetDefault("webspaces.config_defaults.startup_delay", 3)
@@ -51,6 +49,7 @@ func init() {
 	viper.SetDefault("webspaces.ports.start", 49152)
 	viper.SetDefault("webspaces.ports.end", 65535)
 	viper.SetDefault("webspaces.ports.max", 64)
+	viper.SetDefault("webspaces.ports.kubernetes_service", "")
 
 	viper.SetDefault("http.listen_address", ":80")
 	viper.SetDefault("http.cors.allowed_origins", []string{"*"})

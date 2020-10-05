@@ -12,9 +12,8 @@ lxd:
     client_key:
     trust_password: hunter2
     allow_insecure: false
-  network: lxdbr0
 webspaces:
-  profile: webspace
+  lxd_profile: webspace
   instance_prefix: 'ws-'
   domain: .ng.localhost
   config_defaults:
@@ -27,6 +26,7 @@ webspaces:
     start: 49152
     end: 65535
     max: 64
+    kubernetes_service: ''
 http:
   listen_address: ':8080'
   cors:

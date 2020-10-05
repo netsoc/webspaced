@@ -103,9 +103,6 @@ func (s *Server) Start() error {
 	if err != nil {
 		return err
 	}
-	if _, _, err := s.lxd.GetNetwork(s.Config.LXD.Network); err != nil {
-		return fmt.Errorf("LXD returned error looking for network %v: %w", s.Config.LXD.Network, err)
-	}
 
 	s.Webspaces, err = webspace.NewManager(&s.Config, s.iam, s.lxd)
 	if err != nil {

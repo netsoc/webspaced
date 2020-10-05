@@ -1,13 +1,25 @@
 package webspace
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net"
+	"os"
+	"strconv"
 	"sync"
 
-	"github.com/netsoc/webspaced/pkg/util"
 	log "github.com/sirupsen/logrus"
+
+	k8sCore "k8s.io/api/core/v1"
+	k8sMeta "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/client-go/kubernetes"
+	k8sTypedCore "k8s.io/client-go/kubernetes/typed/core/v1"
+	"k8s.io/client-go/tools/clientcmd"
+
+	"github.com/netsoc/webspaced/internal/config"
+	"github.com/netsoc/webspaced/pkg/util"
 )
 
 // PortHook represents a function to run before connecting to the backend
@@ -107,12 +119,34 @@ func (f *PortForward) Stop() {
 
 // PortsManager manages TCP port forwarding
 type PortsManager struct {
+	svcName string
+	svcAPI  k8sTypedCore.ServiceInterface
+
 	forwards map[uint16]*PortForward
 }
 
 // NewPortsManager creates a new TCP port forward manager
-func NewPortsManager() *PortsManager {
-	return &PortsManager{map[uint16]*PortForward{}}
+func NewPortsManager(cfg *config.Config) (*PortsManager, error) {
+	p := PortsManager{
+		forwards: map[uint16]*PortForward{},
+	}
+
+	if cfg.Webspaces.Ports.KubernetesService != "" {
+		k8sConf, err := clientcmd.BuildConfigFromFlags("", os.Getenv(clientcmd.RecommendedConfigPathEnvVar))
+		if err != nil {
+			return nil, fmt.Errorf("failed to load Kubernetes config: %w", err)
+		}
+
+		k8s, err := kubernetes.NewForConfig(k8sConf)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create Kubernetes client: %w", err)
+		}
+
+		p.svcAPI = k8s.CoreV1().Services(cfg.Traefik.Kubernetes.Namespace)
+		p.svcName = cfg.Webspaces.Ports.KubernetesService
+	}
+
+	return &p, nil
 }
 
 // Add creates a new port forwarding
@@ -128,6 +162,42 @@ func (p *PortsManager) Add(e uint16, backendAddr *net.TCPAddr, hook PortHook) er
 
 	go forward.Run()
 	p.forwards[e] = forward
+
+	if p.svcName != "" {
+		ctx := context.Background()
+
+		svc, err := p.svcAPI.Get(ctx, p.svcName, k8sMeta.GetOptions{})
+		if err != nil {
+			return fmt.Errorf("failed to get Kubernetes Service: %w", err)
+		}
+
+		svcPort := k8sCore.ServicePort{
+			Name:       "ws-fwd-" + strconv.Itoa(int(e)),
+			Port:       int32(e),
+			Protocol:   k8sCore.ProtocolTCP,
+			TargetPort: intstr.FromInt(backendAddr.Port),
+		}
+
+		existing := false
+		for i, sp := range svc.Spec.Ports {
+			if sp.Port == int32(e) {
+				log.WithFields(log.Fields{
+					"ePort":   e,
+					"backend": backendAddr,
+				}).Warn("Kubernetes Service port already existed, overwriting")
+				svc.Spec.Ports[i] = svcPort
+				existing = true
+			}
+		}
+		if !existing {
+			svc.Spec.Ports = append(svc.Spec.Ports, svcPort)
+		}
+
+		if _, err := p.svcAPI.Update(ctx, svc, k8sMeta.UpdateOptions{}); err != nil {
+			return fmt.Errorf("failed to update Kubernetes Service: %w", err)
+		}
+	}
+
 	return nil
 }
 
@@ -136,6 +206,38 @@ func (p *PortsManager) Remove(e uint16) error {
 	forward, ok := p.forwards[e]
 	if !ok {
 		return util.ErrNotFound
+	}
+
+	if p.svcName != "" {
+		ctx := context.Background()
+
+		svc, err := p.svcAPI.Get(ctx, p.svcName, k8sMeta.GetOptions{})
+		if err != nil {
+			return fmt.Errorf("failed to get Kubernetes Service: %w", err)
+		}
+
+		index := -1
+		for i, p := range svc.Spec.Ports {
+			if p.Port == int32(e) {
+				index = i
+				break
+			}
+		}
+
+		if index != -1 {
+			end := len(svc.Spec.Ports) - 1
+			svc.Spec.Ports[end], svc.Spec.Ports[index] = svc.Spec.Ports[index], svc.Spec.Ports[end]
+			svc.Spec.Ports = svc.Spec.Ports[:end]
+
+			if _, err := p.svcAPI.Update(ctx, svc, k8sMeta.UpdateOptions{}); err != nil {
+				return fmt.Errorf("failed to update Kubernetes Service: %w", err)
+			}
+		} else {
+			log.WithFields(log.Fields{
+				"ePort":   e,
+				"backend": forward.backendAddr,
+			}).Warn("Kubernetes Service port not found")
+		}
 	}
 
 	forward.Stop()
@@ -201,6 +303,13 @@ func (p *PortsManager) AddAll(w *Webspace, addr string) error {
 
 			// Only ensure started if we're not running already
 			hook = func(_ *PortForward) error { return nil }
+		} else {
+			var err error
+			// Dummy address so the port can be retrieved
+			backendAddr, err = net.ResolveTCPAddr("tcp", fmt.Sprintf("%v:%v", "69.69.69.69", i))
+			if err != nil {
+				panic(err)
+			}
 		}
 
 		if err := p.Add(e, backendAddr, hook); err != nil {
@@ -213,7 +322,7 @@ func (p *PortsManager) AddAll(w *Webspace, addr string) error {
 
 // Shutdown stops and removes all port forwards
 func (p *PortsManager) Shutdown() {
-	for _, forward := range p.forwards {
-		forward.Stop()
+	for e := range p.forwards {
+		p.Remove(e)
 	}
 }

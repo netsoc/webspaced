@@ -43,6 +43,11 @@ func NewManager(cfg *config.Config, iam *iam.APIClient, l lxd.InstanceServer) (*
 		return nil, fmt.Errorf("failed to initializae Traefik config provider %v: %w", cfg.Traefik.Provider, err)
 	}
 
+	ports, err := NewPortsManager(cfg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize port forwards manager: %w", err)
+	}
+
 	return &Manager{
 		cfg,
 		l,
@@ -51,7 +56,7 @@ func NewManager(cfg *config.Config, iam *iam.APIClient, l lxd.InstanceServer) (*
 		regexp.MustCompile(fmt.Sprintf(lxdEventUserRegexTpl, cfg.Webspaces.InstancePrefix)),
 		nil,
 		traefik,
-		NewPortsManager(),
+		ports,
 	}, nil
 }
 
@@ -61,6 +66,7 @@ func (m *Manager) Start() error {
 	if err != nil {
 		return fmt.Errorf("failed to retrieve all webspaces: %w", err)
 	}
+
 	for _, w := range webspaces {
 		state, _, err := m.lxd.GetInstanceState(w.InstanceName())
 		if err != nil {
@@ -344,7 +350,7 @@ func (m *Manager) Create(uid int, image string, password string, sshKey string) 
 		},
 		InstancePut: lxdApi.InstancePut{
 			Ephemeral: false,
-			Profiles:  []string{m.config.Webspaces.Profile},
+			Profiles:  []string{m.config.Webspaces.LXDProfile},
 			Config: map[string]string{
 				lxdConfigKey: lxdConf,
 			},
