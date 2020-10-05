@@ -11,6 +11,7 @@ import (
 	"github.com/gorilla/mux"
 	lxd "github.com/lxc/lxd/client"
 	iam "github.com/netsoc/iam/client"
+	"github.com/rs/cors"
 
 	"github.com/netsoc/webspaced/internal/config"
 	"github.com/netsoc/webspaced/internal/data"
@@ -30,10 +31,24 @@ type Server struct {
 
 // NewServer returns an initialized Server
 func NewServer(config config.Config) *Server {
+	corsMiddleware := cors.New(cors.Options{
+		AllowedOrigins: config.HTTP.CORS.AllowedOrigins,
+		AllowedMethods: []string{
+			http.MethodHead,
+			http.MethodGet,
+			http.MethodPost,
+			http.MethodPut,
+			http.MethodPatch,
+			http.MethodDelete,
+		},
+		AllowedHeaders:   []string{"*"},
+		AllowCredentials: true,
+	})
+
 	r := mux.NewRouter()
 	httpSrv := &http.Server{
 		Addr:    config.HTTP.ListenAddress,
-		Handler: claimsMiddleware(handlers.CustomLoggingHandler(nil, r, writeAccessLog)),
+		Handler: claimsMiddleware(handlers.CustomLoggingHandler(nil, corsMiddleware.Handler(r), writeAccessLog)),
 	}
 
 	cfg := iam.NewConfiguration()
