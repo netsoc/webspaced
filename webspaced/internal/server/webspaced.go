@@ -124,7 +124,12 @@ func (s *Server) Start() error {
 
 // Stop shuts down the server and listener
 func (s *Server) Stop() error {
-	return s.http.Close()
+	if err := s.http.Close(); err != nil {
+		return fmt.Errorf("failed to stop HTTP server: %w", err)
+	}
+
+	s.Webspaces.Shutdown()
+	return nil
 }
 
 func apiNotFound(w http.ResponseWriter, r *http.Request) {

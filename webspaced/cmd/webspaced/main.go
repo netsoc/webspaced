@@ -124,6 +124,7 @@ func reload() {
 }
 
 func stop() {
+	log.Info("Stopping server")
 	if err := srv.Stop(); err != nil {
 		log.WithError(err).Fatal("Failed to stop server")
 	}
