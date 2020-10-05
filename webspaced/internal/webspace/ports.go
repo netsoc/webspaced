@@ -175,7 +175,7 @@ func (p *PortsManager) Add(e uint16, backendAddr *net.TCPAddr, hook PortHook) er
 			Name:       "ws-fwd-" + strconv.Itoa(int(e)),
 			Port:       int32(e),
 			Protocol:   k8sCore.ProtocolTCP,
-			TargetPort: intstr.FromInt(backendAddr.Port),
+			TargetPort: intstr.FromInt(int(e)),
 		}
 
 		existing := false
@@ -303,13 +303,6 @@ func (p *PortsManager) AddAll(w *Webspace, addr string) error {
 
 			// Only ensure started if we're not running already
 			hook = func(_ *PortForward) error { return nil }
-		} else {
-			var err error
-			// Dummy address so the port can be retrieved
-			backendAddr, err = net.ResolveTCPAddr("tcp", fmt.Sprintf("%v:%v", "69.69.69.69", i))
-			if err != nil {
-				panic(err)
-			}
 		}
 
 		if err := p.Add(e, backendAddr, hook); err != nil {
