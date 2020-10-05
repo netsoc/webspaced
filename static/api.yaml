@@ -1,6 +1,6 @@
 openapi: '3.0.3'
 info:
-  version: '1.0.0'
+  version: '1.0.1'
   title: Netsoc webspaced
   description: >
     API for managing next-gen webspaces.
@@ -194,7 +194,7 @@ components:
         cpu:
           type: integer
           format: int64
-          description: CPU time
+          description: CPU time (nanoseconds)
           example: 685502875
         disks:
           type: object
@@ -589,6 +589,27 @@ paths:
                       memory: 0
                       processes: 0
                     networkInterfaces: {}
+        '401':
+          $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/responses/AuthError'
+        '403':
+          $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/responses/AdminError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      summary: Re-generate webspace backend config
+      operationId: sync
+      tags: [state]
+      parameters:
+        - $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/parameters/UsernameOrSelf'
+      security:
+        - jwt: []
+        - jwt_admin: []
+      description: Forces a reload of reverse proxy and port forwarding configuration
+      responses:
+        '204':
+          description: No content
         '401':
           $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/responses/AuthError'
         '403':

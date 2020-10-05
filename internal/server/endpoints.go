@@ -67,6 +67,8 @@ func (s *Server) apiSetWebspaceState(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "POST":
 		err = ws.Boot()
+	case "PATCH":
+		err = ws.Sync()
 	case "PUT":
 		err = ws.Reboot()
 	case "DELETE":

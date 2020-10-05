@@ -545,3 +545,21 @@ func (w *Webspace) Log() (io.ReadCloser, error) {
 	}
 	return log, nil
 }
+
+// Sync forces configuration for a webspace to be re-generated
+func (w *Webspace) Sync() error {
+	addr, _ := w.GetIP(nil)
+
+	if err := w.manager.traefik.ClearConfig(w.InstanceName()); err != nil {
+		return fmt.Errorf("failed to clear traefik config: %w", err)
+	}
+	if err := w.manager.traefik.GenerateConfig(w, addr); err != nil {
+		return fmt.Errorf("failed to update traefik config: %w", err)
+	}
+
+	if err := w.manager.ports.AddAll(w, addr); err != nil {
+		return fmt.Errorf("failed to set up port forwards: %w", err)
+	}
+
+	return nil
+}
