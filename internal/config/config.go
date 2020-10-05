@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/mitchellh/mapstructure"
 	log "github.com/sirupsen/logrus"
@@ -40,6 +41,7 @@ func DecoderOptions(config *mapstructure.DecoderConfig) {
 	config.ErrorUnused = true
 	config.DecodeHook = mapstructure.ComposeDecodeHookFunc(
 		config.DecodeHook,
+		mapstructure.StringToTimeDurationHookFunc(),
 		StringToLogLevelHookFunc(),
 		StringToTemplateHookFunc(),
 	)
@@ -92,6 +94,7 @@ type Config struct {
 		Domain          string         `mapstructure:"domain"`
 		ConfigDefaults  WebspaceConfig `mapstructure:"config_defaults"`
 		MaxStartupDelay uint16         `mapstructure:"max_startup_delay"`
+		IPTimeout       time.Duration  `mapstructure:"ip_timeout"`
 		RunLimit        uint           `mapstructure:"run_limit"`
 
 		Ports struct {

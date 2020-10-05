@@ -378,7 +378,7 @@ func (w *Webspace) GetIP(state *lxdApi.InstanceState) (string, error) {
 // AwaitIP attempts to retrieve the webspace's IP with exponential backoff
 func (w *Webspace) AwaitIP() (string, error) {
 	back := backoff.NewExponentialBackOff()
-	back.MaxElapsedTime = 10 * time.Second
+	back.MaxElapsedTime = w.manager.config.Webspaces.IPTimeout
 
 	var addr string
 	if err := backoff.RetryNotify(func() error {
