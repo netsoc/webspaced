@@ -1,0 +1,51 @@
+on:
+  push:
+    tags:
+      - 'v*'
+
+name: Release
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    env:
+      CR_PAT_USER: devplayer0
+      DOCKER_REPO: ghcr.io/netsoc/webspaced
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - id: vars
+        name: Generate release vars
+        run: |
+          echo "::set-output name=version::"$(echo "${{ github.ref }}" | sed -r 's|refs/tags/v(.+)|\1|')""
+
+          echo "Changelog: " > release.md
+          git log --pretty=format:" - %s" "$(git describe --tags --abbrev=0 ${{ github.event.ref }}^)"..${{ github.event.ref }} >> release.md
+
+      - name: Log into GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ env.CR_PAT_USER }}
+          password: ${{ secrets.CI_PAT }}
+
+      - name: Tag Docker image
+        run: |
+          docker pull "$DOCKER_REPO:${{ github.sha }}"
+          docker tag "$DOCKER_REPO:${{ github.sha }}" "$DOCKER_REPO:${{ steps.vars.outputs.version }}"
+          docker push "$DOCKER_REPO:${{ steps.vars.outputs.version }}"
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ steps.vars.outputs.version }}
+          body_path: release.md

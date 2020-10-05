@@ -9,7 +9,9 @@ COPY tools.go ./
 RUN cat tools.go | sed -nr 's|^\t_ "(.+)"$|\1|p' | xargs -tI % go get %
 
 COPY cmd/ ./cmd/
+COPY pkg/ ./pkg/
 COPY internal/ ./internal/
+RUN go-bindata -o internal/data/bindata.go -pkg data -prefix static/ static/...
 RUN mkdir bin/ && go build -ldflags '-s -w' -o bin/ ./cmd/...
 
 
