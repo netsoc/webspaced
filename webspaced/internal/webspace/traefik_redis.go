@@ -10,27 +10,27 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// Traefik manages webspace configuration for Traefik
-type Traefik struct {
+// TraefikRedis manages webspace configuration for Traefik via Redis
+type TraefikRedis struct {
 	config *config.Config
 	redis  *redis.Client
 }
 
-// NewTraefik creates a new Traefik instance
-func NewTraefik(cfg *config.Config) *Traefik {
+// NewTraefikRedis creates a new Traefik config manager using Redis
+func NewTraefikRedis(cfg *config.Config) Traefik {
 	client := redis.NewClient(&redis.Options{
 		Addr: cfg.Traefik.Redis.Addr,
 		DB:   cfg.Traefik.Redis.DB,
 	})
 
-	return &Traefik{
+	return &TraefikRedis{
 		cfg,
 		client,
 	}
 }
 
 // ClearConfig cleans out any configuration for an instance
-func (t *Traefik) ClearConfig(n string) error {
+func (t *TraefikRedis) ClearConfig(n string) error {
 	if _, err := t.redis.TxPipelined(func(pipe redis.Pipeliner) error {
 		pipe.Del(
 			fmt.Sprintf("traefik/http/services/%v/loadbalancer/servers/0/url", n),
@@ -70,9 +70,9 @@ func (t *Traefik) ClearConfig(n string) error {
 			fmt.Sprintf("traefik/tcp/routers/%v-https/webspaceboot/userID", n),
 		)
 
-		if len(t.config.Traefik.SANs) > 0 {
-			keys := make([]string, 2*len(t.config.Traefik.SANs))
-			for i := 0; i < len(t.config.Traefik.SANs); i++ {
+		if len(t.config.Traefik.DefaultSANs) > 0 {
+			keys := make([]string, 2*len(t.config.Traefik.DefaultSANs))
+			for i := 0; i < len(t.config.Traefik.DefaultSANs); i++ {
 				keys[i*2] = fmt.Sprintf("traefik/http/routers/%v-https/tls/domains/0/sans/%v", n, i)
 				keys[i*2+1] = fmt.Sprintf("traefik/tcp/routers/%v-https/tls/domains/0/sans/%v", n, i)
 			}
@@ -88,7 +88,7 @@ func (t *Traefik) ClearConfig(n string) error {
 }
 
 // GenerateConfig generates new Traefik configuration for a webspace
-func (t *Traefik) GenerateConfig(ws *Webspace, addr string) error {
+func (t *TraefikRedis) GenerateConfig(ws *Webspace, addr string) error {
 	if addr == "" && t.config.Traefik.WebspacedURL == "" {
 		// Traefik hooks (only used when webspaces aren't running) are disabled
 		return nil
@@ -139,10 +139,10 @@ func (t *Traefik) GenerateConfig(ws *Webspace, addr string) error {
 
 		pipe.Set(fmt.Sprintf("traefik/http/routers/%v/service", n), n, 0)
 		pipe.Set(fmt.Sprintf("traefik/http/routers/%v/rule", n), rule, 0)
-		pipe.Set(fmt.Sprintf("traefik/http/routers/%v/entrypoints/0", n), t.config.Traefik.HTTPEntryPoint, 0)
+		pipe.Set(fmt.Sprintf("traefik/http/routers/%v/entrypoints/0", n), t.config.Traefik.HTTPSEntryPoint, 0)
 
 		var rt string
-		if ws.Config.HTTPSPort == 0 {
+		if !ws.Config.SNIPassthrough {
 			// SSL termination
 			rt = "http"
 
@@ -167,7 +167,7 @@ func (t *Traefik) GenerateConfig(ws *Webspace, addr string) error {
 			if addr != "" {
 				pipe.Set(
 					fmt.Sprintf("traefik/tcp/services/%v/loadbalancer/servers/0/address", n),
-					fmt.Sprintf("%v:%v", addr, ws.Config.HTTPSPort),
+					fmt.Sprintf("%v:%v", addr, ws.Config.HTTPPort),
 					0,
 				)
 				pipe.Set(fmt.Sprintf("traefik/tcp/routers/%v-https/service", n), n, 0)
@@ -201,14 +201,14 @@ func (t *Traefik) GenerateConfig(ws *Webspace, addr string) error {
 			"*."+t.config.Webspaces.Domain,
 			0,
 		)
-		if t.config.Traefik.CertResolver != "" {
+		if t.config.Traefik.Redis.CertResolver != "" {
 			pipe.Set(
 				fmt.Sprintf("traefik/%v/routers/%v-https/tls/certresolver", rt, n),
-				t.config.Traefik.CertResolver,
+				t.config.Traefik.Redis.CertResolver,
 				0,
 			)
 		}
-		for i, san := range t.config.Traefik.SANs {
+		for i, san := range t.config.Traefik.DefaultSANs {
 			pipe.Set(
 				fmt.Sprintf("traefik/%v/routers/%v-https/tls/domains/0/sans/%v", rt, n, i),
 				san,

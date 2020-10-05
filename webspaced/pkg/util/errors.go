@@ -41,6 +41,8 @@ var (
 	ErrBadValue = errors.New("invalid value for configuration option")
 	// ErrUIDMismatch indicates the user ID didn't match that of the User object
 	ErrUIDMismatch = errors.New("user id doesn't match provided value")
+	// ErrTraefikProvider indicates an invalid Traefik config provider name was given
+	ErrTraefikProvider = errors.New("invalid Traefik provider")
 )
 
 // ErrToStatus converts an error to a HTTP status code

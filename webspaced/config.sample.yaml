@@ -20,10 +20,28 @@ webspaces:
   config_defaults:
     startup_delay: 3
     http_port: 80
-    https_port: 443
+    sni_passthrough: false
   max_startup_delay: 60
   run_limit: 32
   ports:
     start: 49152
     end: 65535
     max: 64
+http:
+  listen_address: ':8080'
+  cors:
+    allowed_origins: ['*']
+traefik:
+  provider: kubernetes
+  redis:
+    addr: '127.0.0.1:6379'
+    db: 0
+    cert_resolver: ''
+  kubernetes:
+    namespace: webspace-ng
+    default_secret: ''
+    cluster_issuer: ''
+  https_entrypoint: https
+  default_sans: ['*.ng.localhost']
+  webspaced_url: 'http://localhost:8080'
+  iam_token: A.B.C

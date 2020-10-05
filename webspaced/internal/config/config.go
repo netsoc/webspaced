@@ -47,9 +47,9 @@ func DecoderOptions(config *mapstructure.DecoderConfig) {
 
 // WebspaceConfig describes a webspace's basic key = value configuration
 type WebspaceConfig struct {
-	StartupDelay float64 `json:"startupDelay" mapstructure:"startup_delay"`
-	HTTPPort     uint16  `json:"httpPort" mapstructure:"http_port"`
-	HTTPSPort    uint16  `json:"httpsPort" mapstructure:"https_port"`
+	StartupDelay   float64 `json:"startupDelay" mapstructure:"startup_delay"`
+	HTTPPort       uint16  `json:"httpPort" mapstructure:"http_port"`
+	SNIPassthrough bool    `json:"sniPassthrough" mapstructure:"sni_passthrough"`
 }
 
 // Config describes the configuration for Server
@@ -112,16 +112,21 @@ type Config struct {
 	}
 
 	Traefik struct {
+		Provider string
+
 		Redis struct {
-			Addr string
-			DB   int
+			Addr         string
+			DB           int
+			CertResolver string `mapstructure:"cert_resolver"`
+		}
+		Kubernetes struct {
+			Namespace     string
+			DefaultSecret string `mapstructure:"default_secret"`
+			ClusterIssuer string `mapstructure:"cluster_issuer"`
 		}
 
-		HTTPEntryPoint  string `mapstructure:"http_entry_point"`
-		HTTPSEntryPoint string `mapstructure:"https_entry_point"`
-
-		CertResolver string `mapstructure:"cert_resolver"`
-		SANs         []string
+		HTTPSEntryPoint string   `mapstructure:"https_entrypoint"`
+		DefaultSANs     []string `mapstructure:"default_sans"`
 
 		WebspacedURL string `mapstructure:"webspaced_url"`
 		IAMToken     string `mapstructure:"iam_token"`

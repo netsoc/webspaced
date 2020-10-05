@@ -23,12 +23,26 @@ type Manager struct {
 
 	lxdWsUserRegex *regexp.Regexp
 	lxdListener    *lxd.EventListener
-	traefik        *Traefik
+	traefik        Traefik
 	ports          *PortsManager
 }
 
 // NewManager returns a new Manager instance
-func NewManager(cfg *config.Config, iam *iam.APIClient, l lxd.InstanceServer) *Manager {
+func NewManager(cfg *config.Config, iam *iam.APIClient, l lxd.InstanceServer) (*Manager, error) {
+	var traefik Traefik
+	var err error
+	switch cfg.Traefik.Provider {
+	case "kubernetes":
+		traefik, err = NewTraefikKubernetes(cfg)
+	case "redis", "":
+		traefik = NewTraefikRedis(cfg)
+	default:
+		return nil, util.ErrTraefikProvider
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to initializae Traefik config provider %v: %w", cfg.Traefik.Provider, err)
+	}
+
 	return &Manager{
 		cfg,
 		l,
@@ -36,9 +50,9 @@ func NewManager(cfg *config.Config, iam *iam.APIClient, l lxd.InstanceServer) *M
 
 		regexp.MustCompile(fmt.Sprintf(lxdEventUserRegexTpl, cfg.Webspaces.InstancePrefix)),
 		nil,
-		NewTraefik(cfg),
+		traefik,
 		NewPortsManager(),
-	}
+	}, nil
 }
 
 // Start starts the webspace manager
@@ -67,6 +81,9 @@ func (m *Manager) Start() error {
 			}
 		}
 
+		if err := m.traefik.ClearConfig(w.InstanceName()); err != nil {
+			return fmt.Errorf("failed to clear traefik config: %w", err)
+		}
 		if err := m.traefik.GenerateConfig(w, addr); err != nil {
 			return fmt.Errorf("failed to update traefik config: %w", err)
 		}

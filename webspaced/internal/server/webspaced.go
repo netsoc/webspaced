@@ -107,9 +107,12 @@ func (s *Server) Start() error {
 		return fmt.Errorf("LXD returned error looking for network %v: %w", s.Config.LXD.Network, err)
 	}
 
-	s.Webspaces = webspace.NewManager(&s.Config, s.iam, s.lxd)
+	s.Webspaces, err = webspace.NewManager(&s.Config, s.iam, s.lxd)
+	if err != nil {
+		return fmt.Errorf("failed to create webspace manager: %w", err)
+	}
 	if err := s.Webspaces.Start(); err != nil {
-		return fmt.Errorf("failed to start webspace manager: %v", err)
+		return fmt.Errorf("failed to start webspace manager: %w", err)
 	}
 
 	if err := s.http.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
