@@ -1,0 +1,80 @@
+name: Generate API clients
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - static/api.yaml
+
+jobs:
+  javascript:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/setup-node@v1
+        with:
+          node-version: '12.x'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Run openapi-generator
+        run: |
+          npx @openapitools/openapi-generator-cli@cli-4.3.1 generate \
+            -g javascript \
+            -i static/api.yaml \
+            -p projectName="@netsoc/webspaced" \
+            -o js-client/
+
+      - name: Install dependencies
+        run: npm install
+        working-directory: js-client/
+
+      - name: Publish
+        run: npm publish --access public
+        working-directory: js-client/
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  golang:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Run openapi-generator
+        run: |
+          rm -rf client/
+          npx @openapitools/openapi-generator-cli@cli-4.3.1 generate \
+            -g go \
+            -i static/api.yaml \
+            -o client/ \
+            --git-user-id netsoc \
+            --git-repo-id webspaced/client \
+            -p packageName=webspaced
+
+          # Allow `application/problem+json` content type
+          sed -ri 's!^\tjsonCheck = regexp.MustCompile.*$!\tjsonCheck = regexp.MustCompile(`(?i:(?:application|text)/(?:[^;]+\\+)?json)`)!' client/client.go
+          cp LICENSE.md client/
+
+      - name: Commit changes
+        run: |
+          curl -Lo yq https://github.com/mikefarah/yq/releases/download/3.4.0/yq_linux_amd64
+          chmod +x yq
+          version="$(./yq r static/api.yaml info.version)"
+
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+          git add client/
+          git commit -m "Re-generate Go API client"
+          git tag "client/v${version}"
+
+      - name: Push generated code
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          tags: true

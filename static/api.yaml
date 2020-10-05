@@ -859,7 +859,9 @@ paths:
         '200':
           description: Console log
           content:
-            text/plain: {}
+            text/plain:
+              schema:
+                type: string
         '401':
           $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/responses/AuthError'
         '403':
