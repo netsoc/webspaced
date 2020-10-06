@@ -15,7 +15,7 @@ import (
 // StringToLogLevelHookFunc returns a mapstructure.DecodeHookFunc which parses a logrus Level from a string
 func StringToLogLevelHookFunc() mapstructure.DecodeHookFunc {
 	return func(f reflect.Type, t reflect.Type, data interface{}) (interface{}, error) {
-		if f.Kind() != reflect.String || t.Kind() != reflect.TypeOf(log.InfoLevel).Kind() {
+		if f.Kind() != reflect.String || t != reflect.TypeOf(log.InfoLevel) {
 			return data, nil
 		}
 
