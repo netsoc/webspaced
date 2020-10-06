@@ -87,7 +87,6 @@ config:
       sni_passthrough: false
     max_startup_delay: 60
     ip_timeout: '15s'
-    run_limit: 32
     ports:
       start: 49152
       end: 65535
