@@ -2,6 +2,7 @@ log_level: TRACE
 iam:
   url: 'https://iam.netsoc.ie/v1'
   token: A.B.C
+  token_file: ''
   allow_insecure: false
 lxd:
   url: https://localhost
@@ -46,3 +47,4 @@ traefik:
   default_sans: ['*.ng.localhost']
   webspaced_url: 'http://localhost:8080'
   iam_token: A.B.C
+  iam_token_file: ''

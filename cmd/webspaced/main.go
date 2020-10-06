@@ -24,6 +24,7 @@ func init() {
 
 	viper.SetDefault("iam.url", "https://iam.netsoc.ie/v1")
 	viper.SetDefault("iam.token", "")
+	viper.SetDefault("iam.token_file", "")
 	viper.SetDefault("iam.allow_insecure", false)
 
 	viper.SetDefault("lxd.url", "https://localhost")
@@ -67,6 +68,7 @@ func init() {
 	viper.SetDefault("traefik.default_sans", []string{})
 	viper.SetDefault("traefik.webspaced_url", "http://localhost:8080")
 	viper.SetDefault("traefik.iam_token", "")
+	viper.SetDefault("traefik.iam_token_file", "")
 
 	// Config file loading
 	viper.SetConfigType("yaml")

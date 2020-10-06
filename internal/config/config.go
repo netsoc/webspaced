@@ -61,7 +61,8 @@ type Config struct {
 	IAM struct {
 		URL           string
 		Token         string
-		AllowInsecure bool `mapstructure:"allow_insecure"`
+		TokenFile     string `mapstructure:"token_file"`
+		AllowInsecure bool   `mapstructure:"allow_insecure"`
 	}
 
 	LXD struct {
@@ -133,6 +134,7 @@ type Config struct {
 
 		WebspacedURL string `mapstructure:"webspaced_url"`
 		IAMToken     string `mapstructure:"iam_token"`
+		IAMTokenFile string `mapstructure:"iam_token_file"`
 	}
 }
 
@@ -180,11 +182,19 @@ func loadSecret(parent interface{}, field string) error {
 
 // ReadSecrets loads values for secret config options from files
 func (c *Config) ReadSecrets() error {
+	if err := loadSecret(&c.IAM, "Token"); err != nil {
+		return err
+	}
+
 	tls := []string{"CA", "ServerCert", "ClientCert", "ClientKey", "TrustPassword"}
 	for _, f := range tls {
 		if err := loadSecret(&c.LXD.TLS, f); err != nil {
 			return err
 		}
+	}
+
+	if err := loadSecret(&c.Traefik, "IAMToken"); err != nil {
+		return err
 	}
 
 	return nil
