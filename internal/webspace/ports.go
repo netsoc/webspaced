@@ -17,6 +17,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	k8sTypedCore "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/clientcmd"
+	k8sRetry "k8s.io/client-go/util/retry"
 
 	"github.com/netsoc/webspaced/internal/config"
 	"github.com/netsoc/webspaced/pkg/util"
@@ -166,34 +167,37 @@ func (p *PortsManager) Add(e uint16, backendAddr *net.TCPAddr, hook PortHook) er
 	if p.svcName != "" {
 		ctx := context.Background()
 
-		svc, err := p.svcAPI.Get(ctx, p.svcName, k8sMeta.GetOptions{})
-		if err != nil {
-			return fmt.Errorf("failed to get Kubernetes Service: %w", err)
-		}
-
-		svcPort := k8sCore.ServicePort{
-			Name:       "ws-fwd-" + strconv.Itoa(int(e)),
-			Port:       int32(e),
-			Protocol:   k8sCore.ProtocolTCP,
-			TargetPort: intstr.FromInt(int(e)),
-		}
-
-		existing := false
-		for i, sp := range svc.Spec.Ports {
-			if sp.Port == int32(e) {
-				log.WithFields(log.Fields{
-					"ePort":   e,
-					"backend": backendAddr,
-				}).Warn("Kubernetes Service port already existed, overwriting")
-				svc.Spec.Ports[i] = svcPort
-				existing = true
+		if err := k8sRetry.RetryOnConflict(k8sRetry.DefaultRetry, func() error {
+			svc, err := p.svcAPI.Get(ctx, p.svcName, k8sMeta.GetOptions{})
+			if err != nil {
+				return fmt.Errorf("failed to get Kubernetes Service: %w", err)
 			}
-		}
-		if !existing {
-			svc.Spec.Ports = append(svc.Spec.Ports, svcPort)
-		}
 
-		if _, err := p.svcAPI.Update(ctx, svc, k8sMeta.UpdateOptions{}); err != nil {
+			svcPort := k8sCore.ServicePort{
+				Name:       "ws-fwd-" + strconv.Itoa(int(e)),
+				Port:       int32(e),
+				Protocol:   k8sCore.ProtocolTCP,
+				TargetPort: intstr.FromInt(int(e)),
+			}
+
+			existing := false
+			for i, sp := range svc.Spec.Ports {
+				if sp.Port == int32(e) {
+					log.WithFields(log.Fields{
+						"ePort":   e,
+						"backend": backendAddr,
+					}).Warn("Kubernetes Service port already existed, overwriting")
+					svc.Spec.Ports[i] = svcPort
+					existing = true
+				}
+			}
+			if !existing {
+				svc.Spec.Ports = append(svc.Spec.Ports, svcPort)
+			}
+
+			_, err = p.svcAPI.Update(ctx, svc, k8sMeta.UpdateOptions{})
+			return err
+		}); err != nil {
 			return fmt.Errorf("failed to update Kubernetes Service: %w", err)
 		}
 	}
@@ -211,32 +215,38 @@ func (p *PortsManager) Remove(e uint16) error {
 	if p.svcName != "" {
 		ctx := context.Background()
 
-		svc, err := p.svcAPI.Get(ctx, p.svcName, k8sMeta.GetOptions{})
-		if err != nil {
-			return fmt.Errorf("failed to get Kubernetes Service: %w", err)
-		}
-
-		index := -1
-		for i, p := range svc.Spec.Ports {
-			if p.Port == int32(e) {
-				index = i
-				break
+		if err := k8sRetry.RetryOnConflict(k8sRetry.DefaultRetry, func() error {
+			svc, err := p.svcAPI.Get(ctx, p.svcName, k8sMeta.GetOptions{})
+			if err != nil {
+				return fmt.Errorf("failed to get Kubernetes Service: %w", err)
 			}
-		}
 
-		if index != -1 {
-			end := len(svc.Spec.Ports) - 1
-			svc.Spec.Ports[end], svc.Spec.Ports[index] = svc.Spec.Ports[index], svc.Spec.Ports[end]
-			svc.Spec.Ports = svc.Spec.Ports[:end]
-
-			if _, err := p.svcAPI.Update(ctx, svc, k8sMeta.UpdateOptions{}); err != nil {
-				return fmt.Errorf("failed to update Kubernetes Service: %w", err)
+			index := -1
+			for i, p := range svc.Spec.Ports {
+				if p.Port == int32(e) {
+					index = i
+					break
+				}
 			}
-		} else {
-			log.WithFields(log.Fields{
-				"ePort":   e,
-				"backend": forward.backendAddr,
-			}).Warn("Kubernetes Service port not found")
+
+			if index != -1 {
+				end := len(svc.Spec.Ports) - 1
+				svc.Spec.Ports[end], svc.Spec.Ports[index] = svc.Spec.Ports[index], svc.Spec.Ports[end]
+				svc.Spec.Ports = svc.Spec.Ports[:end]
+
+				if _, err := p.svcAPI.Update(ctx, svc, k8sMeta.UpdateOptions{}); err != nil {
+					return err
+				}
+			} else {
+				log.WithFields(log.Fields{
+					"ePort":   e,
+					"backend": forward.backendAddr,
+				}).Warn("Kubernetes Service port not found")
+			}
+
+			return nil
+		}); err != nil {
+			return fmt.Errorf("failed to update Kubernetes Service: %w", err)
 		}
 	}
 
