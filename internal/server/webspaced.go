@@ -108,6 +108,8 @@ func NewServer(config config.Config) *Server {
 		httpswagger.PersistAuth(true),
 	))
 
+	r.HandleFunc("/health", s.healthCheck)
+
 	r.NotFoundHandler = http.HandlerFunc(apiNotFound)
 	r.MethodNotAllowedHandler = http.HandlerFunc(apiMethodNotAllowed)
 
@@ -159,4 +161,8 @@ func apiNotFound(w http.ResponseWriter, r *http.Request) {
 
 func apiMethodNotAllowed(w http.ResponseWriter, r *http.Request) {
 	util.JSONErrResponse(w, util.ErrMethodNotAllowed, http.StatusMethodNotAllowed)
+}
+
+func (s *Server) healthCheck(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNoContent)
 }
