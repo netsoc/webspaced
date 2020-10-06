@@ -1,0 +1,25 @@
+
+{{- if not .Values.global.kubelan.externalConfigMap }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "webspaced.fullname" . }}-kubelan
+  labels:
+    {{- include "webspaced.labels" . | nindent 4 }}
+data:
+  kubelan.yaml: |
+    log_level: {{ .Values.global.kubelan.log_level }}
+    services:
+      - {{ include "webspaced.fullname" . }}
+    {{- range $s := .Values.global.kubelan.extraServices }}
+      - {{ $s }}
+    {{- end }}
+    {{- with .Values.global.kubelan.vxlan }}
+    vxlan:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with .Values.global.kubelan.hooks }}
+    hooks:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+{{- end }}

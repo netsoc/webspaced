@@ -1,0 +1,126 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "webspaced.fullname" . }}
+  labels:
+    {{- include "webspaced.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "webspaced.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+    {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+      labels:
+        {{- include "webspaced.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "webspaced.serviceAccountName" . }}
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: WSD_HTTP_LISTEN_ADDRESS
+              value: ':80'
+            - name: WSD_TRAEFIK_PROVIDER
+              value: kubernetes
+            - name: WSD_TRAEFIK_KUBERNETES_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: WSD_TRAEFIK_WEBSPACED_URL
+              value: http://{{ include "webspaced.fullname" . }}.{{ .Release.Namespace }}
+          {{- if .Values.fwdService.enabled }}
+            - name: WSD_WEBSPACES_PORTS_KUBERNETES_SERVICE
+              value: {{ include "webspaced.fullname" . }}-forwarding
+          {{- end }}
+
+            - name: WSD_IAM_TOKEN_FILE
+              value: /run/secrets/webspaced/iam_token.txt
+            - name: WSD_LXD_TLS_CLIENT_KEY_FILE
+              value: /run/secrets/webspaced/lxd_client.key
+            - name: WSD_LXD_TLS_TRUST_PASSWORD_FILE
+              value: /run/secrets/webspaced/lxd_trust.txt
+            - name: WSD_TRAEFIK_IAM_TOKEN_FILE
+              value: /run/secrets/webspaced/traefik_iam_token.txt
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /run/config
+            - name: secrets
+              mountPath: /run/secrets/webspaced
+        - name: kubelan
+          image: '{{ .Values.global.kubelan.image.repository }}:{{ .Values.global.kubelan.image.tag }}'
+          imagePullPolicy: {{ .Values.global.kubelan.image.pullPolicy }}
+          env:
+            - name: KL_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: KL_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+
+            - name: IFACE_IP
+              value: {{ .Values.staticIP | squote }}
+            - name: KL_HOOKS_UP
+              value: 'sh,-c,ip addr add $IFACE_IP dev $IFACE'
+          ports:
+            - name: http
+              containerPort: 8181
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 5
+          securityContext:
+            capabilities:
+              add: [NET_ADMIN]
+          volumeMounts:
+            - name: kubelan-config
+              mountPath: /run/config
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "webspaced.fullname" . }}
+        - name: secrets
+          secret:
+            secretName: {{ include "webspaced.fullname" . }}
+        - name: kubelan-config
+          configMap:
+          {{- if .Values.global.kubelan.externalConfigMap }}
+            name: {{ .Values.global.kubelan.externalConfigMap }}
+          {{- else }}
+            name: {{ include "webspaced.fullname" . }}-kubelan
+          {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

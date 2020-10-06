@@ -1,0 +1,38 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "webspaced.fullname" . }}
+  labels:
+    {{- include "webspaced.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "webspaced.selectorLabels" . | nindent 4 }}
+{{- if .Values.fwdService.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "webspaced.fullname" . }}-forwarding
+{{- with .Values.fwdService.annotations }}
+  annotations:
+    {{- toYaml . | nindent 8 }}
+{{- end }}
+  labels:
+    {{- include "webspaced.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.fwdService.type }}
+  ports:
+    - port: {{ .Values.fwdService.dummyPort }}
+      targetPort: {{ .Values.fwdService.dummyPort }}
+      protocol: TCP
+      name: dummy
+  selector:
+    {{- include "webspaced.selectorLabels" . | nindent 4 }}
+{{- end }}

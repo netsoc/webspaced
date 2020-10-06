@@ -1,0 +1,28 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "webspaced.fullname" . }}
+  labels:
+    {{- include "webspaced.labels" . | nindent 4 }}
+rules:
+  - apiGroups: ['', 'traefik.containo.us', 'cert-manager.io']
+    resources:
+      - endpoints
+      - services
+      - middlewares
+      - ingressroutes
+      - ingressroutetcps
+      - certificates
+    verbs: ['get', 'create', 'update', 'delete']
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "webspaced.fullname" . }}
+  labels:
+    {{- include "webspaced.labels" . | nindent 4 }}
+rules:
+  - apiGroups: ['discovery.k8s.io']
+    resources: ['endpointslices']
+    verbs: ['watch', 'list']
