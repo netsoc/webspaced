@@ -1,0 +1,47 @@
+name: Sync Helm charts
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - charts/**
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    env:
+      CHARTS_REPO: netsoc/charts
+
+    steps:
+      - name: Checkout main repo
+        uses: actions/checkout@v2
+        with:
+          path: main
+
+      - name: Checkout charts repo
+        uses: actions/checkout@v2
+        with:
+          repository: ${{ env.CHARTS_REPO }}
+          persist-credentials: false
+          fetch-depth: 0
+          path: charts
+
+      - name: Update charts in main repo
+        run: |
+          cp -a ../main/charts/ ./
+
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+          git add .
+          git commit -m "Update ${{ github.repository }} charts ($(echo ${{ github.sha }} | cut -c 1-8))"
+        working-directory: charts
+
+      - name: Push updated charts
+        uses: ad-m/github-push-action@master
+        with:
+          directory: charts
+          repository: ${{ env.CHARTS_REPO }}
+          github_token: ${{ secrets.CI_PAT }}
