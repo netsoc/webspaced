@@ -72,7 +72,7 @@ func init() {
 
 	// Config file loading
 	viper.SetConfigType("yaml")
-	viper.SetConfigName("config")
+	viper.SetConfigName("webspaced")
 	viper.AddConfigPath("/run/config")
 	viper.AddConfigPath(".")
 
