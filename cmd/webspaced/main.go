@@ -48,7 +48,6 @@ func init() {
 	viper.SetDefault("webspaces.config_defaults.sni_passthrough", false)
 	viper.SetDefault("webspaces.max_startup_delay", 60)
 	viper.SetDefault("webspaces.ip_timeout", 15*time.Second)
-	viper.SetDefault("webspaces.run_limit", 32)
 	viper.SetDefault("webspaces.ports.start", 49152)
 	viper.SetDefault("webspaces.ports.end", 65535)
 	viper.SetDefault("webspaces.ports.max", 64)

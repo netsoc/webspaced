@@ -96,7 +96,6 @@ type Config struct {
 		ConfigDefaults  WebspaceConfig `mapstructure:"config_defaults"`
 		MaxStartupDelay uint16         `mapstructure:"max_startup_delay"`
 		IPTimeout       time.Duration  `mapstructure:"ip_timeout"`
-		RunLimit        uint           `mapstructure:"run_limit"`
 
 		Ports struct {
 			Start uint16
