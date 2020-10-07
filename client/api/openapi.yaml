@@ -3,7 +3,7 @@ info:
   description: |
     API for managing next-gen webspaces.
   title: Netsoc webspaced
-  version: 1.0.3
+  version: 1.0.4
 servers:
 - url: https://webspaced.netsoc.ie/v1
 - url: https://webspaced.staging.netsoc.ie/v1
@@ -1027,6 +1027,51 @@ paths:
       tags:
       - ports
   /webspace/{username}/console:
+    delete:
+      operationId: clearLog
+      parameters:
+      - description: |
+          User's username. Can be `self` to indicate the currently authenticated user.
+        example: root
+        in: path
+        name: username
+        required: true
+        schema:
+          type: string
+      responses:
+        "204":
+          description: No content
+        "401":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Authorization error (e.g. incorret password, invalid token,
+            token expired etc.)
+        "403":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Admin token is required
+        "404":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Resource does not exist (e.g. user, webspace)
+        "500":
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: General server error
+      security:
+      - jwt: []
+      - jwt_admin: []
+      summary: Clear webspace console log
+      tags:
+      - console
     get:
       operationId: getLog
       parameters:
