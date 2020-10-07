@@ -555,7 +555,17 @@ func (w *Webspace) Log() (io.ReadCloser, error) {
 	if err != nil {
 		return nil, convertLXDError(err)
 	}
+
 	return log, nil
+}
+
+// ClearLog clears the webspace's `/dev/console` log
+func (w *Webspace) ClearLog() error {
+	if err := w.manager.lxd.DeleteInstanceConsoleLog(w.InstanceName(), nil); err != nil {
+		return convertLXDError(err)
+	}
+
+	return nil
 }
 
 // Sync forces configuration for a webspace to be re-generated

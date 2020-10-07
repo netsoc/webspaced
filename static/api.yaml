@@ -1,6 +1,6 @@
 openapi: '3.0.3'
 info:
-  version: '1.0.3'
+  version: '1.0.4'
   title: Netsoc webspaced
   description: >
     API for managing next-gen webspaces.
@@ -890,6 +890,26 @@ paths:
             text/plain:
               schema:
                 type: string
+        '401':
+          $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/responses/AuthError'
+        '403':
+          $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/responses/AdminError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      summary: Clear webspace console log
+      operationId: clearLog
+      tags: [console]
+      parameters:
+        - $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/parameters/UsernameOrSelf'
+      security:
+        - jwt: []
+        - jwt_admin: []
+      responses:
+        '204':
+          description: No content
         '401':
           $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/responses/AuthError'
         '403':

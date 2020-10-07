@@ -221,6 +221,17 @@ func (s *Server) apiConsoleLog(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (s *Server) apiClearConsoleLog(w http.ResponseWriter, r *http.Request) {
+	ws := r.Context().Value(keyWebspace).(*webspace.Webspace)
+
+	if err := ws.ClearLog(); err != nil {
+		util.JSONErrResponse(w, err, 0)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func (s *Server) internalAPIEnsureStarted(w http.ResponseWriter, r *http.Request) {
 	ws := r.Context().Value(keyWebspace).(*webspace.Webspace)
 	ip, err := ws.EnsureStarted()
