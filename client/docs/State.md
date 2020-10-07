@@ -5,6 +5,7 @@
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **Running** | **bool** |  | [default to false]
+**Uptime** | **float32** | Length of time for which container has been running (seconds) | 
 **Usage** | [**Usage**](Usage.md) |  | 
 **NetworkInterfaces** | [**map[string]NetworkInterface**](NetworkInterface.md) |  | 
 

@@ -3,7 +3,7 @@ info:
   description: |
     API for managing next-gen webspaces.
   title: Netsoc webspaced
-  version: 1.0.1
+  version: 1.0.2
 servers:
 - url: https://webspaced.netsoc.ie/v1
 - url: https://webspaced.staging.netsoc.ie/v1
@@ -384,6 +384,7 @@ paths:
                   description: Running
                   value:
                     running: true
+                    uptime: 32
                     usage:
                       cpu: 685502875
                       disks: {}
@@ -416,6 +417,7 @@ paths:
                   description: Not running
                   value:
                     running: false
+                    uptime: 0
                     usage:
                       cpu: 0
                       disks: {}
@@ -1425,11 +1427,16 @@ components:
           disks:
             root: 16777216
           cpu: 685502875
+        uptime: 0.8008281904610115
       properties:
         running:
           default: false
           example: true
           type: boolean
+        uptime:
+          description: Length of time for which container has been running (seconds)
+          format: float64
+          type: number
         usage:
           $ref: '#/components/schemas/Usage'
         networkInterfaces:
@@ -1462,6 +1469,7 @@ components:
       required:
       - networkInterfaces
       - running
+      - uptime
       - usage
       type: object
     InitRequest:
