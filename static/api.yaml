@@ -1,6 +1,6 @@
 openapi: '3.0.3'
 info:
-  version: '1.0.1'
+  version: '1.0.2'
   title: Netsoc webspaced
   description: >
     API for managing next-gen webspaces.
@@ -289,6 +289,7 @@ components:
       type: object
       required:
         - running
+        - uptime
         - usage
         - networkInterfaces
       description: Webspace state
@@ -297,6 +298,10 @@ components:
           type: boolean
           default: false
           example: true
+        uptime:
+          type: number
+          format: float64
+          description: Length of time for which container has been running (seconds)
         usage:
           $ref: '#/components/schemas/Usage'
         networkInterfaces:
@@ -551,6 +556,7 @@ paths:
                   description: Running
                   value:
                     running: true
+                    uptime: 32
                     usage:
                       cpu: 685502875
                       disks: {}
@@ -583,6 +589,7 @@ paths:
                   description: Not running
                   value:
                     running: false
+                    uptime: 0
                     usage:
                       cpu: 0
                       disks: {}

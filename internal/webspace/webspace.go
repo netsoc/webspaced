@@ -473,15 +473,18 @@ type Usage struct {
 // State describes a webspace's state
 type State struct {
 	Running           bool                        `json:"running"`
+	Uptime            float64                     `json:"uptime"`
 	Usage             Usage                       `json:"usage"`
 	NetworkInterfaces map[string]NetworkInterface `json:"networkInterfaces"`
 }
 
 // State returns information about the webspace's state
-func (w *Webspace) State() (*State, error) {
-	ls, _, err := w.manager.lxd.GetInstanceState(w.InstanceName())
+func (w *Webspace) State() (State, error) {
+	n := w.InstanceName()
+
+	ls, _, err := w.manager.lxd.GetInstanceState(n)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get LXD instance state: %w", convertLXDError(err))
+		return State{}, fmt.Errorf("failed to get LXD instance state: %w", convertLXDError(err))
 	}
 
 	s := State{
@@ -493,6 +496,14 @@ func (w *Webspace) State() (*State, error) {
 			Processes: ls.Processes,
 		},
 		NetworkInterfaces: map[string]NetworkInterface{},
+	}
+	if s.Running {
+		i, _, err := w.manager.lxd.GetInstance(n)
+		if err != nil {
+			return State{}, fmt.Errorf("failed to get instance from LXD: %w", convertLXDError(err))
+		}
+
+		s.Uptime = time.Now().Sub(i.LastUsedAt).Seconds()
 	}
 
 	for name, info := range ls.Disk {
@@ -535,7 +546,7 @@ func (w *Webspace) State() (*State, error) {
 		}
 	}
 
-	return &s, nil
+	return s, nil
 }
 
 // Log returns the webspace's `/dev/console` log
