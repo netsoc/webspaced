@@ -3,7 +3,7 @@ info:
   description: |
     API for managing next-gen webspaces.
   title: Netsoc webspaced
-  version: 1.0.2
+  version: 1.0.3
 servers:
 - url: https://webspaced.netsoc.ie/v1
 - url: https://webspaced.staging.netsoc.ie/v1
@@ -1435,7 +1435,7 @@ components:
           type: boolean
         uptime:
           description: Length of time for which container has been running (seconds)
-          format: float64
+          format: double
           type: number
         usage:
           $ref: '#/components/schemas/Usage'
