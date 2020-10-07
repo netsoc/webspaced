@@ -426,11 +426,12 @@ func (w *Webspace) EnsureStarted() (string, error) {
 		return "", fmt.Errorf("failed to start webspace: %w", err)
 	}
 
-	time.Sleep(time.Duration(w.Config.StartupDelay * float64(time.Second)))
-	ip, err := w.GetIP(nil)
+	ip, err := w.AwaitIP()
 	if err != nil {
 		return "", fmt.Errorf("failed to get webspace IP: %w", err)
 	}
+
+	time.Sleep(time.Duration(w.Config.StartupDelay * float64(time.Second)))
 	return ip, nil
 }
 
