@@ -7,10 +7,13 @@ import (
 	"strconv"
 
 	"github.com/gorilla/mux"
+	"github.com/gorilla/websocket"
 	iam "github.com/netsoc/iam/client"
 	"github.com/netsoc/webspaced/internal/webspace"
 	"github.com/netsoc/webspaced/pkg/util"
 )
+
+var upgrader = websocket.Upgrader{}
 
 func (s *Server) apiImages(w http.ResponseWriter, r *http.Request) {
 	images, err := s.Webspaces.Images()
@@ -210,6 +213,7 @@ func (s *Server) apiWebspacePorts(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) apiConsoleLog(w http.ResponseWriter, r *http.Request) {
 	ws := r.Context().Value(keyWebspace).(*webspace.Webspace)
+
 	c, err := ws.Log()
 	if err != nil {
 		util.JSONErrResponse(w, err, 0)

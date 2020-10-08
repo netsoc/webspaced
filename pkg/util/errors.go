@@ -43,6 +43,8 @@ var (
 	ErrUIDMismatch = errors.New("user id doesn't match provided value")
 	// ErrTraefikProvider indicates an invalid Traefik config provider name was given
 	ErrTraefikProvider = errors.New("invalid Traefik provider")
+	// ErrWebsocket indicates the endpoint supports websocket communication only
+	ErrWebsocket = errors.New("this endpoint supports websocket communication only")
 )
 
 // ErrToStatus converts an error to a HTTP status code
@@ -56,7 +58,7 @@ func ErrToStatus(err error) int {
 		return http.StatusConflict
 	case errors.Is(err, ErrDomainUnverified), errors.Is(err, ErrBadPort),
 		errors.Is(err, ErrTooManyPorts), errors.Is(err, ErrDefaultDomain),
-		errors.Is(err, ErrBadValue):
+		errors.Is(err, ErrBadValue), errors.Is(err, ErrWebsocket):
 		return http.StatusBadRequest
 	default:
 		return http.StatusInternalServerError

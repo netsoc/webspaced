@@ -1,6 +1,6 @@
 openapi: '3.0.3'
 info:
-  version: '1.0.4'
+  version: '1.1.0'
   title: Netsoc webspaced
   description: >
     API for managing next-gen webspaces.
@@ -873,7 +873,7 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
 
-  /webspace/{username}/console:
+  /webspace/{username}/log:
     get:
       summary: Retrieve webspace console log
       operationId: getLog
@@ -910,6 +910,38 @@ paths:
       responses:
         '204':
           description: No content
+        '401':
+          $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/responses/AuthError'
+        '403':
+          $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/responses/AdminError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /webspace/{username}/console:
+    get:
+      summary: Attach to webspace console
+      operationId: console
+      tags: [console]
+      parameters:
+        - $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/parameters/UsernameOrSelf'
+      security:
+        - jwt: []
+        - jwt_admin: []
+      description: >
+        _IMPORTANT_: This endpoint uses a websocket. On connection,
+        a single text message should be sent with integers for
+        terminal `width` and `height` (as JSON, e.g.
+        `{"width": 80, "height": 24}`). Following this, binary
+        messages to and from the socket will be routed to the console
+        TTY.
+
+
+        Any other text messages will also be treated as resize
+        events (same format).
+      responses:
+        '400':
+          description: Non-websocket request made
         '401':
           $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/responses/AuthError'
         '403':
