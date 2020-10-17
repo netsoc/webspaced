@@ -98,6 +98,7 @@ func NewServer(config config.Config) *Server {
 	wsOpRouter.HandleFunc("/log", s.apiConsoleLog).Methods("GET")
 	wsOpRouter.HandleFunc("/log", s.apiClearConsoleLog).Methods("DELETE")
 	wsOpRouter.HandleFunc("/console", s.apiConsole).Methods("GET")
+	wsOpRouter.HandleFunc("/exec", s.apiExec).Methods("POST")
 
 	adminAuthM := authMiddleware{IAM: s.iam, NeedAdmin: true}
 	internalWsOpRouter := r.PathPrefix("/internal/{username}").Subrouter()
@@ -129,7 +130,7 @@ func (s *Server) Start() error {
 		InsecureSkipVerify: s.Config.LXD.TLS.AllowInsecure,
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to connect to LXD: %w", err)
 	}
 
 	s.Webspaces, err = webspace.NewManager(&s.Config, s.iam, s.lxd)

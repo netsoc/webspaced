@@ -3,6 +3,7 @@ package webspace
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -82,51 +83,78 @@ func (w *Webspace) lxdConfig() (string, error) {
 	return string(confJSON), nil
 }
 
-func (w *Webspace) simpleExec(cmd string) (string, string, error) {
+// Exec runs a command in a webspace non-interactively
+func (w *Webspace) Exec(cmd string, ensureBooted bool) (int, string, string, error) {
 	n := w.InstanceName()
+
+	if ensureBooted {
+		state, _, err := w.manager.lxd.GetInstanceState(n)
+		if err != nil {
+			return -1, "", "", fmt.Errorf("failed to get LXD instance state: %w", convertLXDError(err))
+		}
+
+		if state.StatusCode != lxdApi.Running {
+			if err := w.Boot(); err != nil {
+				return -1, "", "", fmt.Errorf("failed to start webspace: %w", err)
+			}
+		}
+	}
 
 	asyncOp, err := w.manager.lxd.ExecInstance(n, lxdApi.InstanceExecPost{
 		Command:      []string{"sh", "-c", cmd},
 		RecordOutput: true,
 	}, nil)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to execute command in LXD instance: %w", convertLXDError(err))
+		return -1, "", "", fmt.Errorf("failed to execute command in LXD instance: %w", convertLXDError(err))
 	}
 	if err := asyncOp.Wait(); err != nil {
-		return "", "", fmt.Errorf("failed to execute command in LXD instance: %w", convertLXDError(err))
+		return -1, "", "", fmt.Errorf("failed to execute command in LXD instance: %w", convertLXDError(err))
 	}
 
 	op := asyncOp.Get()
 	output := op.Metadata["output"].(map[string]interface{})
 	outReader, err := w.manager.lxd.GetInstanceLogfile(n, lxdLogFilenameRegex.FindStringSubmatch(output["1"].(string))[1])
 	if err != nil {
-		return "", "", fmt.Errorf("failed to retrieve LXD command stdout: %w", convertLXDError(err))
+		return -1, "", "", fmt.Errorf("failed to retrieve LXD command stdout: %w", convertLXDError(err))
 	}
 	errReader, err := w.manager.lxd.GetInstanceLogfile(n, lxdLogFilenameRegex.FindStringSubmatch(output["2"].(string))[1])
 	if err != nil {
-		return "", "", fmt.Errorf("failed to retrieve LXD command stderr: %w", convertLXDError(err))
+		return -1, "", "", fmt.Errorf("failed to retrieve LXD command stderr: %w", convertLXDError(err))
 	}
 
 	outData, err := ioutil.ReadAll(outReader)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to read LXD command stdout: %w", err)
+		return -1, "", "", fmt.Errorf("failed to read LXD command stdout: %w", err)
 	}
 	outReader.Close()
 
 	errData, err := ioutil.ReadAll(errReader)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to read LXD command stderr: %w", err)
+		return -1, "", "", fmt.Errorf("failed to read LXD command stderr: %w", err)
 	}
 	errReader.Close()
 
 	stdout := string(outData)
 	stderr := string(errData)
 
-	code := op.Metadata["return"]
-	if code != 0. {
-		return stdout, stderr, fmt.Errorf("failed to execute command in LXD instance: non-zero exit code %v", code)
+	code, ok := op.Metadata["return"].(float64)
+	if !ok {
+		return -1, stdout, stderr, errors.New("failed to get exit code")
 	}
-	return stdout, stderr, nil
+	return int(code), stdout, stderr, nil
+}
+
+func (w *Webspace) simpleExec(cmd string) (string, string, error) {
+	c, so, se, err := w.Exec(cmd, false)
+	if err != nil {
+		return so, se, err
+	}
+
+	if c != 0 {
+		return so, se, fmt.Errorf("exit with non-zero exit status: %v", c)
+	}
+
+	return so, se, nil
 }
 
 // InstanceName uses the suffix to calculate the name of the instance

@@ -1,6 +1,6 @@
 openapi: '3.0.3'
 info:
-  version: '1.1.0'
+  version: '1.1.1'
   title: Netsoc webspaced
   description: >
     API for managing next-gen webspaces.
@@ -349,6 +349,15 @@ components:
           type: string
           description: SSH key for root user
 
+    ExecRequest:
+      type: object
+      required:
+        - command
+      properties:
+        command:
+          type: string
+          example: 'cat /etc/passwd'
+
     AddRandomPortResponse:
       type: object
       required:
@@ -356,6 +365,23 @@ components:
       properties:
         ePort:
           $ref: '#/components/schemas/Port'
+
+    ExecResponse:
+      type: object
+      required:
+        - stdout
+        - stderr
+        - exitCode
+      properties:
+        stdout:
+          type: string
+          description: Process stdout
+        stderr:
+          type: string
+          description: Process stderr
+        exitCode:
+          type: integer
+          description: Process exit code
 
 paths:
   /images:
@@ -910,6 +936,44 @@ paths:
       responses:
         '204':
           description: No content
+        '401':
+          $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/responses/AuthError'
+        '403':
+          $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/responses/AdminError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /webspace/{username}/exec:
+    post:
+      summary: Execute command non-interactively
+      operationId: exec
+      tags: [console]
+      parameters:
+        - $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/parameters/UsernameOrSelf'
+      security:
+        - jwt: []
+        - jwt_admin: []
+      description: >
+        Runs a command non-interactively (no TTY, waits for completion and returns complete stdout and stderr).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExecRequest'
+            examples:
+              simple:
+                summary: Simple command execution
+                value:
+                  command: 'echo hello, world!'
+      responses:
+        '200':
+          description: Command result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecResponse'
         '401':
           $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/responses/AuthError'
         '403':

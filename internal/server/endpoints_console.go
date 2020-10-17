@@ -80,3 +80,33 @@ func (s *Server) apiConsole(w http.ResponseWriter, r *http.Request) {
 		log.WithError(err).Error("Console session failed")
 	}
 }
+
+type execReq struct {
+	Command string `json:"command"`
+}
+type execRes struct {
+	Stdout   string `json:"stdout"`
+	Stderr   string `json:"stderr"`
+	ExitCode int    `json:"exitCode"`
+}
+
+func (s *Server) apiExec(w http.ResponseWriter, r *http.Request) {
+	ws := r.Context().Value(keyWebspace).(*webspace.Webspace)
+
+	var body execReq
+	if err := util.ParseJSONBody(&body, w, r); err != nil {
+		return
+	}
+
+	code, stdout, stderr, err := ws.Exec(body.Command, true)
+	if err != nil {
+		util.JSONErrResponse(w, err, 0)
+		return
+	}
+
+	util.JSONResponse(w, execRes{
+		Stdout:   stdout,
+		Stderr:   stderr,
+		ExitCode: code,
+	}, http.StatusOK)
+}
