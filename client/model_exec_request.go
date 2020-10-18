@@ -8,8 +8,7 @@
  */
 
 package webspaced
-// AddRandomPortResponse struct for AddRandomPortResponse
-type AddRandomPortResponse struct {
-	// Network port
-	EPort int32 `json:"ePort"`
+// ExecRequest struct for ExecRequest
+type ExecRequest struct {
+	Command string `json:"command"`
 }
