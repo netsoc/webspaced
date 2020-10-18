@@ -1,6 +1,6 @@
 openapi: '3.0.3'
 info:
-  version: '1.1.1'
+  version: '1.1.2'
   title: Netsoc webspaced
   description: >
     API for managing next-gen webspaces.
@@ -332,6 +332,30 @@ components:
                   netmask: '64'
                   scope: link
 
+    ResizeRequest:
+      type: object
+      required:
+        - width
+        - height
+      properties:
+        width:
+          type: integer
+          description: Width of terminal (columns)
+          example: 80
+        height:
+          type: integer
+          description: Height of terminal (rows)
+          example: 24
+    ExecInteractiveControl:
+      type: object
+      properties:
+        resize:
+          $ref: '#/components/schemas/ResizeRequest'
+        signal:
+          type: integer
+          description: Signal to send to process
+          example: 2
+
     InitRequest:
       type: object
       required:
@@ -357,6 +381,42 @@ components:
         command:
           type: string
           example: 'cat /etc/passwd'
+    ExecInteractiveRequest:
+      type: object
+      required:
+        - command
+        - width
+        - height
+      properties:
+        command:
+          type: array
+          items:
+            type: string
+        user:
+          type: integer
+          format: int32
+          description: User ID to run as
+          example: 1000
+        group:
+          type: integer
+          format: int32
+          description: Group ID to run as
+          example: 1000
+        environment:
+          type: object
+          additionalProperties:
+            type: string
+          description: Additional environment variables to pass to process
+        width:
+          type: integer
+          description: Width of terminal (columns)
+          example: 80
+        height:
+          type: integer
+          description: Height of terminal (rows)
+          example: 24
+        workingDirectory:
+          type: string
 
     AddRandomPortResponse:
       type: object
@@ -982,6 +1042,41 @@ paths:
           $ref: '#/components/responses/NotFoundError'
         '500':
           $ref: '#/components/responses/InternalError'
+    get:
+      summary: Execute a command interactively
+      operationId: execInteractive
+      tags: [console]
+      parameters:
+        - $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/parameters/UsernameOrSelf'
+      security:
+        - jwt: []
+        - jwt_admin: []
+      description: >
+        _IMPORTANT_: This endpoint uses a websocket. On connection,
+        a single text message should be sent (as JSON), this message is of the
+        form `ExecInteractiveRequest`. Following this, binary
+        messages to and from the socket will be routed to the process
+        PTY.
+
+
+        Any other text messages will be treated as `ExecInteractiveControl`
+        messages. Pass a signal number to send a signal to the process, and
+        non-zero values for `width` and `height` to resize.
+
+
+        Upon command completion, the close message will be the exit code of the
+        process.
+      responses:
+        '400':
+          description: Non-websocket request made
+        '401':
+          $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/responses/AuthError'
+        '403':
+          $ref: 'https://raw.githubusercontent.com/netsoc/iam/master/static/api.yaml#/components/responses/AdminError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalError'
   /webspace/{username}/console:
     get:
       summary: Attach to webspace console
@@ -995,7 +1090,7 @@ paths:
       description: >
         _IMPORTANT_: This endpoint uses a websocket. On connection,
         a single text message should be sent with integers for
-        terminal `width` and `height` (as JSON, e.g.
+        terminal `width` and `height` (as JSON, see `ResizeRequest` e.g.
         `{"width": 80, "height": 24}`). Following this, binary
         messages to and from the socket will be routed to the console
         TTY.
