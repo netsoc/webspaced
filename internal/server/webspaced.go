@@ -99,6 +99,7 @@ func NewServer(config config.Config) *Server {
 	wsOpRouter.HandleFunc("/log", s.apiClearConsoleLog).Methods("DELETE")
 	wsOpRouter.HandleFunc("/console", s.apiConsole).Methods("GET")
 	wsOpRouter.HandleFunc("/exec", s.apiExec).Methods("POST")
+	wsOpRouter.HandleFunc("/exec", s.apiExecInteractive).Methods("GET")
 
 	adminAuthM := authMiddleware{IAM: s.iam, NeedAdmin: true}
 	internalWsOpRouter := r.PathPrefix("/internal/{username}").Subrouter()
