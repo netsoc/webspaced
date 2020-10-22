@@ -41,3 +41,20 @@ record. This should be of the form `webspace:id:123`, where `123` is your user
 ID. You can find your user ID by running `netsoc account info`. Example:
 
 ![Cloudflare TXT record](../assets/dns_txt.png)
+
+## Adding the domain
+
+Once you've set up the DNS records, you can use
+`netsoc webspace domains add mysite.nul.ie` to add the domain (with the domain
+used above). If you get a message saying that verification failed, remember that
+DNS records can take a while to propagate.
+
+Once the domain verifies and is added successfully, you should be able to visit
+your webspace on the new domain!
+
+!!! note
+    You might a warning that the certificate for the domain is invalid. This is
+    most likely because our servers haven't had a chance to obtain an SSL
+    certificate for your domain yet. Try again after a few minutes. _Beware that
+    many browsers will keep old TLS connections to open, so you might need to
+    close and re-open the browser completely before retrying!_
