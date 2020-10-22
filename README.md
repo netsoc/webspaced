@@ -13,3 +13,7 @@ maybe PHP and MySQL, users would have full root access to their container and be
 system and develop their site using any framework they would like. Using containers instead of virtual machines, a
 reverse proxy, port forwarding and Heroku-style transparent booting make it possible to make these very flexible
 webspaces available on the limited hardware of a university society such as Netsoc.
+
+## Documentation
+
+See [our dedicated documentation](https://docs.netsoc.ie/webspaced/) for more information.

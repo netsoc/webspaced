@@ -1,0 +1,48 @@
+name: Update documentation
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - docs/**
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+
+    env:
+      DOCS_REPO: netsoc/docs
+      DOCS_SUBDIR: webspaced
+
+    steps:
+      - name: Checkout main repo
+        uses: actions/checkout@v2
+        with:
+          path: main
+
+      - name: Checkout docs repo
+        uses: actions/checkout@v2
+        with:
+          repository: ${{ env.DOCS_REPO }}
+          persist-credentials: false
+          fetch-depth: 0
+          path: docs
+
+      - name: Update docs in docs repo
+        run: |
+          cp -a ../main/docs/ "./docs/$DOCS_SUBDIR/"
+
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+          git add .
+          git commit -m "Update ${{ github.repository }} documentation ($(echo ${{ github.sha }} | cut -c 1-8))"
+        working-directory: docs
+
+      - name: Push updated docs
+        uses: ad-m/github-push-action@master
+        with:
+          directory: docs
+          repository: ${{ env.DOCS_REPO }}
+          github_token: ${{ secrets.CI_PAT }}
