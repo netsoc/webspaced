@@ -35,7 +35,7 @@ $
 ```
 
 We recommend [Ubuntu](https://ubuntu.com) for beginners, and _it's what we'll
-assume you're using in future tutorials_. Generally most of what is shown is
+assume you're using in future guides. Generally most of what is shown is
 the same or at least very similar across Linux distros.
 
 To create your container:
@@ -53,8 +53,8 @@ It can be whatever you like, most of the time you probably won't need it.
     authentication, you can run
     `netsoc webspace init --ssh-key /path/to/key.pub`. An SSH server will be
     installed along with your public key. A port forward will be created so you
-    can connect directly. Otherwise, don't worry! We'll cover SSH in a future
-    guide.
+    can connect directly. Otherwise, don't worry! You can install an SSH server
+    later by following [this guide](guides/port_forwarding/).
 
 After up to about a minute, the command should complete and your webspace will
 be initialized!
@@ -75,11 +75,20 @@ Congrats! You've now got full root access to your container.
 ## Website setup
 
 Once logged in, you can set up a web server to serve some pages! We'll use
-`nginx`. From your webspace shell, run `apt install nginx`. When prompted with
-`Do you want to continue? [Y/n]`, just press enter. You should see something
-like this (summarised):
+`nginx`. From your webspace shell, run `apt update` followed by
+`apt install nginx`. When prompted with `Do you want to continue? [Y/n]`, just
+press enter. You should see something like this (summarised):
 
 ```
+root@ws-u1:~# apt update
+Hit:1 http://archive.ubuntu.com/ubuntu focal InRelease
+...
+Get:17 http://security.ubuntu.com/ubuntu focal-security/multiverse amd64 Packages [1256 B]
+Fetched 2970 kB in 2s (1472 kB/s)
+Reading package lists... Done
+Building dependency tree
+Reading state information... Done
+12 packages can be upgraded. Run 'apt list --upgradable' to see them.
 root@ws-u1:~# apt install nginx
 Reading package lists... Done
 Building dependency tree
