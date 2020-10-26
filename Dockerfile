@@ -22,3 +22,5 @@ COPY --from=builder /usr/local/lib/webspaced/bin/* /usr/local/bin/
 
 EXPOSE 80/tcp
 ENTRYPOINT ["/usr/local/bin/webspaced"]
+
+LABEL org.opencontainers.image.source https://github.com/netsoc/webspaced

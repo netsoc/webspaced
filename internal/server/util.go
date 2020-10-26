@@ -93,7 +93,14 @@ func (m *authMiddleware) Middleware(next http.Handler) http.Handler {
 			return
 		}
 
-		// Only admins can get another user's info, so it's ok to let them use a different username in the path
+		// If the token is valid, the claim that the user is an admin is also valid (changing admin status rolls
+		// the token version)
+		c := r.Context().Value(keyClaims).(*UserClaims)
+		if m.NeedAdmin && !c.IsAdmin {
+			util.JSONErrResponse(w, util.ErrAdminRequired, 0)
+			return
+		}
+
 		username, ok := mux.Vars(r)["username"]
 		if !ok {
 			username = "self"
@@ -102,11 +109,6 @@ func (m *authMiddleware) Middleware(next http.Handler) http.Handler {
 		u, iamRes, err := m.IAM.UsersApi.GetUser(ctx, username)
 		if err != nil {
 			util.JSONErrResponse(w, err, iamRes.StatusCode)
-			return
-		}
-
-		if m.NeedAdmin && !u.IsAdmin {
-			util.JSONErrResponse(w, util.ErrAdminRequired, 0)
 			return
 		}
 
