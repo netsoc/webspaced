@@ -2,7 +2,12 @@
 
 Next-gen webspaces support custom domains! This means you can access your
 webspace at `https://mydomain.com` (for example) as well as
-`https://myusername.ng.netsoc.ie`.
+`https://myusername.netsoc.ie`.
+
+!!! note
+    Since the migration of webspaces is now complete,
+    `https://myusername.ng.nesoc.ie` will redirect to
+    `https://myusername.netsoc.ie`
 
 ## DNS configuration
 

@@ -18,7 +18,7 @@ resources._
 
 But fear not! `webspaced` has been designed to make this completely transparent.
 If any endpoint of your webspace receives a connection (e.g. over HTTP at
-https://myusername.ng.netsoc.ie and any custom domains you have, or through a
+https://myusername.netsoc.ie and any custom domains you have, or through a
 port forward for SSH or some other service), `webspaced` will delay the
 connection until your webspace is ready.
 

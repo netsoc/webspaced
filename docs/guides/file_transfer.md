@@ -13,7 +13,7 @@ the site. With SSH configured, you can transfer files via SCP or SFTP.
 terminal, run it like this:
 
 ```bash
-scp -P 64363 /path/to/local/file.txt root@myusername.ng.netsoc.ie:/remote/path/
+scp -P 64363 /path/to/local/file.txt root@myusername.netsoc.ie:/remote/path/
 ```
 
 Don't forget to change the port based on your configured SSH forwarding port!

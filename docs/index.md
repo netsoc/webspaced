@@ -130,7 +130,7 @@ root@ws-u1:~#
 ```
 
 Now the nginx web server is up and running in your webspace! Visit
-`https://myusername.ng.netsoc.ie` and you should see a page like this:
+`https://myusername.netsoc.ie` and you should see a page like this:
 
 ![nginx](assets/nginx_default.png)
 
