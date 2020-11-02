@@ -35,7 +35,7 @@ $
 ```
 
 We recommend [Ubuntu](https://ubuntu.com) for beginners, and _it's what we'll
-assume you're using in future guides. Generally most of what is shown is
+assume you're using in future guides_. Generally most of what is shown is
 the same or at least very similar across Linux distros.
 
 To create your container:
