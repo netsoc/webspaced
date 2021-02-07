@@ -57,6 +57,17 @@ Change `#PermitRootLogin prohibit-password` to `PermitRootLogin yes` (make sure
 to remove the `#` at the beginning of the line!). Save the file and exit `nano`.
 Run `systemctl reload sshd` to apply the configuration changes.
 
+!!! warning
+    Typically, enabling password login for the `root` account is not
+    recommended. This is because SSH is usually exposed on a known port (22) and
+    it's very easy to write a script that will scan the entire internet and
+    brute force weak passwords. In this case, it's not _too_ much of a concern,
+    since SSH will be exposed on a random port.
+
+    For improved security, particularly if running SSH on port 22, we recommend
+    you look into setting up public key authentication and re-disabling password
+    login for `root`!
+
 ## Create the port forward
 
 Although the SSH server is up and running, you won't be able to connect to it
