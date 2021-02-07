@@ -1,6 +1,6 @@
 openapi: '3.0.3'
 info:
-  version: '1.1.2'
+  version: '1.2.0'
   title: Netsoc webspaced
   description: >
     API for managing next-gen webspaces.
@@ -369,9 +369,11 @@ components:
           type: string
           description: Password for root user
           example: hunter2
-        sshKey:
-          type: string
-          description: SSH key for root user
+        ssh:
+          type: boolean
+          description: >
+            Whether or not to install an SSH server (and create a port forward
+            for it). Requires the user to have an SSH key on their account.
 
     ExecRequest:
       type: object
@@ -509,18 +511,11 @@ paths:
                 value:
                   image: alpine
               login:
-                summary: More advanced example with root password and SSH key
+                summary: More advanced example with root password and SSH enabled
                 value:
                   image: alpine
                   password: hunter2
-                  sshKey: "ssh-rsa
-                    AAAAB3NzaC1yc2EAAAADAQABAAABAQC+kCHXqtznkT9IBN5WxZHmXI97k3Bu\
-                    mT+N4lyHWMo0pykpACCOcGw52EXxQveNqgcwcRUgamL9A2JTE//WRf3O4nBo\
-                    feTRNKcRxTjRoUVIt/F0xbf09yWBqJOXZ8rqLkXhRvSpr1TCUZtYVp5iLtpE\
-                    Rp622OMIqHSwa6HlxBqsCFkBeq1bRyNtYK/IaQAuBPW9MNeFriGqA0Vq078c\
-                    cXp+JINxJbr+ZJybVg6PVqnMD+PgGMZQLkoWjwjH3vcJZZt584UPtrXKpNZu\
-                    Ky6dcMCb2U+O9NOaO66168sBVuK0kZHh51nJ7ZH38VLGiBipRgIQ1fzic3Nc\
-                    n6GC9ko3/OwT"
+                  ssh: true
       responses:
         '201':
           description: New webspace information
