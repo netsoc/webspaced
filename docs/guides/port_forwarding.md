@@ -5,8 +5,8 @@ proxy, what about non-HTTP applications? We have implemented a port forwarding
 system to address this.
 
 !!! note
-    This guide assumes you did **not** pass your SSH public key to
-    `netsoc webspace init` with `--ssh-key`. If you did, SSH with port
+    This guide assumes you did **not** install an SSH server by running
+    `netsoc webspace init` with `--ssh`. If you did, SSH with port
     forwarding is already configured. The information regarding managing your
     port forwards is still relevant of course!
 

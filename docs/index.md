@@ -50,9 +50,10 @@ It can be whatever you like, most of the time you probably won't need it.
 
 !!! tip
     If you are familiar with SSH and would prefer to use public key
-    authentication, you can run
-    `netsoc webspace init --ssh-key /path/to/key.pub`. An SSH server will be
-    installed along with your public key. A port forward will be created so you
+    authentication, you can run `netsoc webspace init --ssh`. An SSH server will
+    be installed along with your Netsoc account's public key (you must have
+    added an SSH key to your account previously). A port forward will be
+    created so you
     can connect directly. Otherwise, don't worry! You can install an SSH server
     later by following [this guide](guides/port_forwarding/).
 
