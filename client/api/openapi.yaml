@@ -3,7 +3,7 @@ info:
   description: |
     API for managing next-gen webspaces.
   title: Netsoc webspaced
-  version: 1.1.2
+  version: 1.2.0
 servers:
 - url: https://webspaced.netsoc.ie/v1
 - url: https://webspaced.staging.netsoc.ie/v1
@@ -147,11 +147,11 @@ paths:
                 value:
                   image: alpine
               login:
-                summary: More advanced example with root password and SSH key
+                summary: More advanced example with root password and SSH enabled
                 value:
                   image: alpine
                   password: hunter2
-                  sshKey: ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC+kCHXqtznkT9IBN5WxZHmXI97k3BumT+N4lyHWMo0pykpACCOcGw52EXxQveNqgcwcRUgamL9A2JTE//WRf3O4nBofeTRNKcRxTjRoUVIt/F0xbf09yWBqJOXZ8rqLkXhRvSpr1TCUZtYVp5iLtpERp622OMIqHSwa6HlxBqsCFkBeq1bRyNtYK/IaQAuBPW9MNeFriGqA0Vq078ccXp+JINxJbr+ZJybVg6PVqnMD+PgGMZQLkoWjwjH3vcJZZt584UPtrXKpNZuKy6dcMCb2U+O9NOaO66168sBVuK0kZHh51nJ7ZH38VLGiBipRgIQ1fzic3Ncn6GC9ko3/OwT
+                  ssh: true
             schema:
               $ref: '#/components/schemas/InitRequest'
         required: true
@@ -1708,7 +1708,7 @@ components:
       example:
         image: alpine
         password: hunter2
-        sshKey: sshKey
+        ssh: true
       properties:
         image:
           description: Image alias or fingerprint
@@ -1718,9 +1718,10 @@ components:
           description: Password for root user
           example: hunter2
           type: string
-        sshKey:
-          description: SSH key for root user
-          type: string
+        ssh:
+          description: |
+            Whether or not to install an SSH server (and create a port forward for it). Requires the user to have an SSH key on their account.
+          type: boolean
       required:
       - image
       type: object
