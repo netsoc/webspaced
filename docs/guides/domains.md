@@ -37,7 +37,10 @@ the `CNAME` record should be `webspaced.netsoc.ie`. See below for an example:
     Some DNS providers might not allow you to put a `CNAME` record at the root
     of your domain. In this case, create an `A` record instead with the
     following IP address: `80.111.124.111`. Note that this is unfortunately
-    due to change in the future as we upgrade servers.
+    due to change in the future as we upgrade servers. Other providers might
+    allow you to create a `CNAME` record at the root, but won't correctly set up
+    the DNS to point to our servers. You should also try an `A` record if a
+    sucessfully created `CNAME` isn't working.
 
 ### TXT record
 
