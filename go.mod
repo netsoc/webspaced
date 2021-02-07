@@ -21,7 +21,7 @@ require (
 	github.com/lxc/lxd v0.0.0-20201005111517-3f2b50ee46c9
 	github.com/magiconair/properties v1.8.4 // indirect
 	github.com/mitchellh/mapstructure v1.3.3
-	github.com/netsoc/iam/client v1.0.9
+	github.com/netsoc/iam/client v1.0.10
 	github.com/pelletier/go-toml v1.8.1 // indirect
 	github.com/rogpeppe/fastuuid v1.2.0 // indirect
 	github.com/rs/cors v1.7.0

@@ -45,6 +45,8 @@ var (
 	ErrTraefikProvider = errors.New("invalid Traefik provider")
 	// ErrWebsocket indicates the endpoint supports websocket communication only
 	ErrWebsocket = errors.New("this endpoint supports websocket communication only")
+	// ErrSSHKey indicates the user requested SSH be set up, but their account does not provide a key
+	ErrSSHKey = errors.New("user has no SSH public key")
 )
 
 // ErrToStatus converts an error to a HTTP status code
@@ -56,9 +58,9 @@ func ErrToStatus(err error) int {
 		return http.StatusNotFound
 	case errors.Is(err, ErrExists), errors.Is(err, ErrRunning), errors.Is(err, ErrUsed):
 		return http.StatusConflict
-	case errors.Is(err, ErrDomainUnverified), errors.Is(err, ErrBadPort),
-		errors.Is(err, ErrTooManyPorts), errors.Is(err, ErrDefaultDomain),
-		errors.Is(err, ErrBadValue), errors.Is(err, ErrWebsocket):
+	case errors.Is(err, ErrDomainUnverified), errors.Is(err, ErrBadPort), errors.Is(err, ErrTooManyPorts),
+		errors.Is(err, ErrDefaultDomain), errors.Is(err, ErrBadValue), errors.Is(err, ErrWebsocket),
+		errors.Is(err, ErrSSHKey):
 		return http.StatusBadRequest
 	default:
 		return http.StatusInternalServerError

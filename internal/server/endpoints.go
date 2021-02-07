@@ -28,7 +28,7 @@ func (s *Server) apiImages(w http.ResponseWriter, r *http.Request) {
 type createWebspaceReq struct {
 	Image    string `json:"image"`
 	Password string `json:"password"`
-	SSHKey   string `json:"sshKey"`
+	SSH      bool   `json:"ssh"`
 }
 type createWebspaceRes struct {
 	SSHPort uint16 `json:"sshPort"`
@@ -45,7 +45,12 @@ func (s *Server) apiCreateWebspace(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user := r.Context().Value(keyUser).(*iam.User)
-	ws, err := s.Webspaces.Create(int(user.Id), body.Image, body.Password, body.SSHKey)
+	if body.SSH && user.SshKey == "" {
+		util.JSONErrResponse(w, util.ErrSSHKey, 0)
+		return
+	}
+
+	ws, err := s.Webspaces.Create(int(user.Id), body.Image, body.Password, user.SshKey)
 	if err != nil {
 		util.JSONErrResponse(w, err, 0)
 		return
