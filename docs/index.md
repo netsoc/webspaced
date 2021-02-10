@@ -22,14 +22,14 @@ list of available options, run `netsoc webspace images`:
 ```bash
 $ netsoc webspace images
 ╭─────────┬──────────────────────────────────────────────┬─────────╮
-│ ALIAS  │ DESCRIPTION                              │ SIZE    │
+│ ALIAS   │ DESCRIPTION                                  │ SIZE    │
 ├─────────┼──────────────────────────────────────────────┼─────────┤
-│ debian │ Debian buster amd64 (20201008_05:24)     │ 74 MiB  │
-│ arch   │ Archlinux current amd64 (20201008_04:18) │ 162 MiB │
-│ fedora │ Fedora 32 amd64 (20201007_20:33)         │ 95 MiB  │
-│ ubuntu │ Ubuntu focal amd64 (20201006_12:17)      │ 99 MiB  │
-│ centos │ Centos 8 amd64 (20201008_07:08)          │ 125 MiB │
-│ alpine │ Alpine 3.12 amd64 (20201006_13:00)       │ 2.4 MiB │
+│ debian  │ Debian buster amd64 (20201008_05:24)         │ 74 MiB  │
+│ arch    │ Archlinux current amd64 (20201008_04:18)     │ 162 MiB │
+│ fedora  │ Fedora 32 amd64 (20201007_20:33)             │ 95 MiB  │
+│ ubuntu  │ Ubuntu focal amd64 (20201006_12:17)          │ 99 MiB  │
+│ centos  │ Centos 8 amd64 (20201008_07:08)              │ 125 MiB │
+│ alpine  │ Alpine 3.12 amd64 (20201006_13:00)           │ 2.4 MiB │
 ╰─────────┴──────────────────────────────────────────────┴─────────╯
 $
 ```
