@@ -50,4 +50,4 @@ jobs:
 
       # Pushing to an existing tag doesn't seem to work with buildx :(
       - name: Push
-        run: docker push "$REPO"
+        run: docker push --all-tags "$REPO"
