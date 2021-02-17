@@ -1,4 +1,3 @@
-
 {{- if not .Values.global.kubelan.externalConfigMap }}
 apiVersion: v1
 kind: ConfigMap
