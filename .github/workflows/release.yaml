@@ -7,11 +7,12 @@ name: Release
 
 jobs:
   release:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
 
     env:
       CR_PAT_USER: devplayer0
       DOCKER_REPO: ghcr.io/netsoc/webspaced
+      RELEASE_NAME: webspaced
 
     steps:
       - name: Checkout code
@@ -47,5 +48,5 @@ jobs:
           GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
         with:
           tag_name: ${{ github.ref }}
-          release_name: Release ${{ steps.vars.outputs.version }}
+          release_name: ${{ env.RELEASE_NAME }} ${{ steps.vars.outputs.version }}
           body_path: release.md
