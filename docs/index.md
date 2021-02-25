@@ -21,22 +21,29 @@ list of available options, run `netsoc webspace images`:
 
 ```bash
 $ netsoc webspace images
-╭─────────┬──────────────────────────────────────────────┬─────────╮
-│ ALIAS   │ DESCRIPTION                                  │ SIZE    │
-├─────────┼──────────────────────────────────────────────┼─────────┤
-│ debian  │ Debian buster amd64 (20201008_05:24)         │ 74 MiB  │
-│ arch    │ Archlinux current amd64 (20201008_04:18)     │ 162 MiB │
-│ fedora  │ Fedora 32 amd64 (20201007_20:33)             │ 95 MiB  │
-│ ubuntu  │ Ubuntu focal amd64 (20201006_12:17)          │ 99 MiB  │
-│ centos  │ Centos 8 amd64 (20201008_07:08)              │ 125 MiB │
-│ alpine  │ Alpine 3.12 amd64 (20201006_13:00)           │ 2.4 MiB │
-╰─────────┴──────────────────────────────────────────────┴─────────╯
+╭─────────────┬──────────────────────────────────────────┬─────────╮
+│ ALIAS       │ DESCRIPTION                              │ SIZE    │
+├─────────────┼──────────────────────────────────────────┼─────────┤
+│ arch        │ Archlinux current amd64 (20210225_04:18) │ 164 MiB │
+│ fedora      │ Fedora 32 amd64 (20210224_20:33)         │ 95 MiB  │
+│ alpine      │ Alpine 3.13 amd64 (20210215_13:00)       │ 2.4 MiB │
+│ debian      │ Debian buster amd64 (20210225_05:24)     │ 74 MiB  │
+│ centos      │ Centos 8 amd64 (20210225_07:08)          │ 126 MiB │
+│ ubuntu      │ Ubuntu focal amd64 (20210223_07:42)      │ 100 MiB │
+│ ubuntu18.04 │ Ubuntu bionic amd64 (20210223_07:42)     │ 98 MiB  │
+│ wordpress   │ WordPress 5.5.3                          │ 157 MiB │
+╰─────────────┴──────────────────────────────────────────┴─────────╯
 $
 ```
 
 We recommend [Ubuntu](https://ubuntu.com) for beginners, and _it's what we'll
 assume you're using in future guides_. Generally most of what is shown is
 the same or at least very similar across Linux distros.
+
+If you'd like to just get up and running with a simple WordPress-based site, you
+can just use the `wordpress` image above. See
+[our WordPress guide](guides/wordpress/) for more details. You can skip all of
+the steps beyond initialising your container!
 
 To create your container:
 

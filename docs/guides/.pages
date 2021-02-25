@@ -1,4 +1,5 @@
 nav:
+  - wordpress.md
   - port_forwarding.md
   - file_transfer.md
   - domains.md
