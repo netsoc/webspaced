@@ -242,7 +242,9 @@ func (t *TraefikKubernetes) GenerateConfig(ws *Webspace, addr string) error {
 				},
 				Spec: cmCRD.CertificateSpec{
 					SecretName: s,
-					DNSNames:   domains,
+					// Should only need the custom domains in the certificate, Traefik will automagically use the
+					// wildcard cert
+					DNSNames: ws.Domains,
 					IssuerRef: cmMeta.ObjectReference{
 						Kind: "ClusterIssuer",
 						Name: t.config.Traefik.Kubernetes.ClusterIssuer,

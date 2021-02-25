@@ -240,6 +240,16 @@ func (w *Webspace) Save() error {
 	return nil
 }
 
+// DefaultDomain returns the default domain for the webspace
+func (w *Webspace) DefaultDomain() (string, error) {
+	user, err := w.GetUser()
+	if err != nil {
+		return "", fmt.Errorf("failed to get user: %w", err)
+	}
+
+	return user.Username + "." + w.manager.config.Webspaces.Domain, nil
+}
+
 // GetDomains gets all domains (including the default one, which can change because of usernames!)
 func (w *Webspace) GetDomains() ([]string, error) {
 	domains := make([]string, len(w.Domains))
@@ -247,12 +257,12 @@ func (w *Webspace) GetDomains() ([]string, error) {
 		domains[i] = d
 	}
 
-	user, err := w.GetUser()
+	defaultDomain, err := w.DefaultDomain()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get user: %w", err)
+		return nil, fmt.Errorf("failed to get default domain: %w", err)
 	}
 
-	domains = append([]string{fmt.Sprintf("%v.%v", user.Username, w.manager.config.Webspaces.Domain)}, domains...)
+	domains = append([]string{defaultDomain}, domains...)
 	return domains, nil
 }
 
