@@ -11,6 +11,7 @@ import (
 	k8sCore "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	k8sMeta "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
 	k8sTypedCore "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/clientcmd"
@@ -41,6 +42,7 @@ type TraefikKubernetes struct {
 	svcAPI k8sTypedCore.ServiceInterface
 
 	mwAPI    traefikTyped.MiddlewareInterface
+	tcpMWAPI traefikTyped.MiddlewareTCPInterface
 	irAPI    traefikTyped.IngressRouteInterface
 	irTCPAPI traefikTyped.IngressRouteTCPInterface
 
@@ -76,6 +78,7 @@ func NewTraefikKubernetes(cfg *config.Config) (Traefik, error) {
 		svcAPI: k8s.CoreV1().Services(cfg.Traefik.Kubernetes.Namespace),
 
 		mwAPI:    traefikK8s.TraefikV1alpha1().Middlewares(cfg.Traefik.Kubernetes.Namespace),
+		tcpMWAPI: traefikK8s.TraefikV1alpha1().MiddlewareTCPs(cfg.Traefik.Kubernetes.Namespace),
 		irAPI:    traefikK8s.TraefikV1alpha1().IngressRoutes(cfg.Traefik.Kubernetes.Namespace),
 		irTCPAPI: traefikK8s.TraefikV1alpha1().IngressRouteTCPs(cfg.Traefik.Kubernetes.Namespace),
 
@@ -101,6 +104,14 @@ func (t *TraefikKubernetes) ClearConfig(n string) error {
 		}
 	} else if err := t.irAPI.Delete(ctx, n, k8sMeta.DeleteOptions{}); err != nil {
 		return fmt.Errorf("failed to delete Traefik IngressRoute CRD: %w", err)
+	}
+
+	if _, err := t.tcpMWAPI.Get(ctx, n+"-boot", k8sMeta.GetOptions{}); err != nil {
+		if !k8sErrors.IsNotFound(err) {
+			return fmt.Errorf("failed to get Traefik TCP Middleware CRD: %w", err)
+		}
+	} else if err := t.tcpMWAPI.Delete(ctx, n+"-boot", k8sMeta.DeleteOptions{}); err != nil {
+		return fmt.Errorf("failed to delete Traefik TCP Middleware CRD: %w", err)
 	}
 
 	if _, err := t.mwAPI.Get(ctx, n+"-boot", k8sMeta.GetOptions{}); err != nil {
@@ -289,7 +300,7 @@ func (t *TraefikKubernetes) GenerateConfig(ws *Webspace, addr string) error {
 									Kind: "Service",
 									Name: n,
 
-									Port: int32(ws.Config.HTTPPort),
+									Port: intstr.FromInt(int(ws.Config.HTTPPort)),
 								},
 							},
 						},
@@ -316,7 +327,7 @@ func (t *TraefikKubernetes) GenerateConfig(ws *Webspace, addr string) error {
 
 			ir.Spec.Routes[0].Middlewares = []traefikCRD.MiddlewareRef{
 				{
-					Name: n + "-boot",
+					Name: m.ObjectMeta.Name,
 				},
 			}
 		}
@@ -344,7 +355,7 @@ func (t *TraefikKubernetes) GenerateConfig(ws *Webspace, addr string) error {
 						Services: []traefikCRD.ServiceTCP{
 							{
 								Name: n,
-								Port: int32(ws.Config.HTTPPort),
+								Port: intstr.FromInt(int(ws.Config.HTTPPort)),
 							},
 						},
 					},
@@ -354,8 +365,27 @@ func (t *TraefikKubernetes) GenerateConfig(ws *Webspace, addr string) error {
 				},
 			},
 		}
+
 		if addr == "" {
-			ir.Spec.WebspaceBoot = &wsb
+			m := traefikCRD.MiddlewareTCP{
+				ObjectMeta: k8sMeta.ObjectMeta{
+					Name:   n + "-boot",
+					Labels: k8sLabels,
+				},
+				Spec: traefikCRD.MiddlewareTCPSpec{
+					WebspaceBoot: &wsb,
+				},
+			}
+
+			if _, err := t.tcpMWAPI.Create(ctx, &m, k8sMeta.CreateOptions{}); err != nil {
+				return fmt.Errorf("failed to create WebspaceBoot TCP middleware: %w", err)
+			}
+
+			ir.Spec.Routes[0].Middlewares = []traefikCRD.ObjectReference{
+				{
+					Name: m.ObjectMeta.Name,
+				},
+			}
 		}
 
 		if _, err := t.irTCPAPI.Create(ctx, &ir, k8sMeta.CreateOptions{}); err != nil {

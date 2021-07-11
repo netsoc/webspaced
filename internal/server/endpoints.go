@@ -45,12 +45,16 @@ func (s *Server) apiCreateWebspace(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user := r.Context().Value(keyUser).(*iam.User)
-	if body.SSH && user.SshKey == "" {
-		util.JSONErrResponse(w, util.ErrSSHKey, 0)
-		return
+	sshKey := ""
+	if body.SSH {
+		if user.SshKey == nil {
+			util.JSONErrResponse(w, util.ErrSSHKey, 0)
+			return
+		}
+		sshKey = *user.SshKey
 	}
 
-	ws, err := s.Webspaces.Create(int(user.Id), body.Image, body.Password, user.SshKey)
+	ws, err := s.Webspaces.Create(int(user.Id), body.Image, body.Password, sshKey)
 	if err != nil {
 		util.JSONErrResponse(w, err, 0)
 		return

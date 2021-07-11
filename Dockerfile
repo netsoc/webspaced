@@ -1,4 +1,4 @@
-FROM golang:1.15-alpine AS builder
+FROM golang:1.16-alpine3.14 AS builder
 RUN apk --no-cache add git gcc musl-dev linux-headers
 
 WORKDIR /usr/local/lib/webspaced
@@ -13,10 +13,10 @@ COPY cmd/ ./cmd/
 COPY pkg/ ./pkg/
 COPY internal/ ./internal/
 RUN go-bindata -fs -o internal/data/bindata.go -pkg data -prefix static/ static/...
-RUN mkdir bin/ && go build -ldflags '-s -w' -o bin/ ./cmd/...
+RUN mkdir bin/ && go build -o bin/ ./cmd/...
 
 
-FROM alpine:3.12
+FROM alpine:3.14
 
 COPY --from=builder /usr/local/lib/webspaced/bin/* /usr/local/bin/
 

@@ -133,8 +133,8 @@ func stop() {
 }
 
 func main() {
-	sigs := make(chan os.Signal)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, os.Interrupt, syscall.SIGTERM)
 
 	viper.OnConfigChange(func(e fsnotify.Event) {
 		log.WithField("file", e.Name).Info("Config changed, reloading")
