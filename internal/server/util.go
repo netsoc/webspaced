@@ -63,12 +63,18 @@ func writeAccessLog(w io.Writer, params handlers.LogFormatterParams) {
 		uid = c.(*UserClaims).Subject
 	}
 
-	log.WithFields(log.Fields{
-		"uid":     uid,
-		"agent":   params.Request.UserAgent(),
-		"status":  params.StatusCode,
-		"resSize": params.Size,
-	}).Debugf("%v %v", params.Request.Method, params.URL.RequestURI())
+	level := log.DebugLevel
+	if params.URL.Path == "/health" {
+		level = log.TraceLevel
+	}
+	log.StandardLogger().
+		WithFields(log.Fields{
+			"uid":     uid,
+			"agent":   params.Request.UserAgent(),
+			"status":  params.StatusCode,
+			"resSize": params.Size,
+		}).
+		Logf(level, "%v %v", params.Request.Method, params.URL.RequestURI())
 }
 
 // authMiddleware is a middleware for validating an IAM token and retrieving the user's details
