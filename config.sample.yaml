@@ -16,7 +16,7 @@ lxd:
 webspaces:
   lxd_profile: webspace
   instance_prefix: 'ws-'
-  domain: .ng.localhost
+  domain: ng.localhost
   config_defaults:
     startup_delay: 3
     http_port: 80

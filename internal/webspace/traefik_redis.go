@@ -1,6 +1,7 @@
 package webspace
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"strings"
@@ -30,7 +31,7 @@ func NewTraefikRedis(cfg *config.Config) Traefik {
 }
 
 // ClearConfig cleans out any configuration for an instance
-func (t *TraefikRedis) ClearConfig(n string) error {
+func (t *TraefikRedis) ClearConfig(ctx context.Context, n string) error {
 	if _, err := t.redis.TxPipelined(func(pipe redis.Pipeliner) error {
 		pipe.Del(
 			fmt.Sprintf("traefik/http/services/%v/loadbalancer/servers/0/url", n),
@@ -88,7 +89,7 @@ func (t *TraefikRedis) ClearConfig(n string) error {
 }
 
 // GenerateConfig generates new Traefik configuration for a webspace
-func (t *TraefikRedis) GenerateConfig(ws *Webspace, addr string) error {
+func (t *TraefikRedis) GenerateConfig(ctx context.Context, ws *Webspace, addr string) error {
 	if addr == "" && t.config.Traefik.WebspacedURL == "" {
 		// Traefik hooks (only used when webspaces aren't running) are disabled
 		return nil
@@ -96,12 +97,12 @@ func (t *TraefikRedis) GenerateConfig(ws *Webspace, addr string) error {
 
 	n := ws.InstanceName()
 
-	user, err := ws.GetUser()
+	user, err := ws.GetUser(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get user: %w", err)
 	}
 
-	domains, err := ws.GetDomains()
+	domains, err := ws.GetDomains(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get webspace domains: %w", err)
 	}

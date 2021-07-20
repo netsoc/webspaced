@@ -93,9 +93,9 @@ func (m *authMiddleware) Middleware(next http.Handler) http.Handler {
 		}
 		t := v.(string)
 
-		ctx := context.WithValue(context.Background(), iam.ContextAccessToken, t)
-		if r, err := m.IAM.UsersApi.ValidateToken(ctx); err != nil {
-			util.JSONErrResponse(w, err, r.StatusCode)
+		ctx := context.WithValue(r.Context(), iam.ContextAccessToken, t)
+		if _, err := m.IAM.UsersApi.ValidateToken(ctx); err != nil {
+			util.JSONErrResponse(w, err, http.StatusForbidden)
 			return
 		}
 
@@ -112,9 +112,9 @@ func (m *authMiddleware) Middleware(next http.Handler) http.Handler {
 			username = "self"
 		}
 
-		u, iamRes, err := m.IAM.UsersApi.GetUser(ctx, username)
+		u, _, err := m.IAM.UsersApi.GetUser(ctx, username)
 		if err != nil {
-			util.JSONErrResponse(w, err, iamRes.StatusCode)
+			util.JSONErrResponse(w, err, 0)
 			return
 		}
 

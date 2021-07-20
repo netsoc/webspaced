@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"crypto/tls"
 	"errors"
 	"fmt"
@@ -150,12 +151,12 @@ func (s *Server) Start() error {
 }
 
 // Stop shuts down the server and listener
-func (s *Server) Stop() error {
-	if err := s.http.Close(); err != nil {
+func (s *Server) Stop(ctx context.Context) error {
+	if err := s.http.Shutdown(ctx); err != nil {
 		return fmt.Errorf("failed to stop HTTP server: %w", err)
 	}
 
-	s.Webspaces.Shutdown()
+	s.Webspaces.Shutdown(ctx)
 	return nil
 }
 

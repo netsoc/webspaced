@@ -55,12 +55,12 @@ type Webspace struct {
 }
 
 // GetUser gets the IAM user associated with this webspace
-func (w *Webspace) GetUser() (*iam.User, error) {
+func (w *Webspace) GetUser(ctx context.Context) (*iam.User, error) {
 	if w.user != nil {
 		return w.user, nil
 	}
 
-	ctx := context.WithValue(context.Background(), iam.ContextAccessToken, w.manager.config.IAM.Token)
+	ctx = context.WithValue(ctx, iam.ContextAccessToken, w.manager.config.IAM.Token)
 	user, _, err := w.manager.iam.UsersApi.GetUserByID(ctx, int32(w.UserID))
 	if err != nil {
 		return nil, err
@@ -164,6 +164,8 @@ func (w *Webspace) InstanceName() string {
 
 // Delete deletes the webspace
 func (w *Webspace) Delete() error {
+	w.manager.Lock(w.UserID)
+	defer w.manager.Unlock(w.UserID)
 	n := w.InstanceName()
 
 	state, _, err := w.manager.lxd.GetInstanceState(n)
@@ -241,8 +243,8 @@ func (w *Webspace) Save() error {
 }
 
 // DefaultDomain returns the default domain for the webspace
-func (w *Webspace) DefaultDomain() (string, error) {
-	user, err := w.GetUser()
+func (w *Webspace) DefaultDomain(ctx context.Context) (string, error) {
+	user, err := w.GetUser(ctx)
 	if err != nil {
 		return "", fmt.Errorf("failed to get user: %w", err)
 	}
@@ -251,13 +253,13 @@ func (w *Webspace) DefaultDomain() (string, error) {
 }
 
 // GetDomains gets all domains (including the default one, which can change because of usernames!)
-func (w *Webspace) GetDomains() ([]string, error) {
+func (w *Webspace) GetDomains(ctx context.Context) ([]string, error) {
 	domains := make([]string, len(w.Domains))
 	for i, d := range w.Domains {
 		domains[i] = d
 	}
 
-	defaultDomain, err := w.DefaultDomain()
+	defaultDomain, err := w.DefaultDomain(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get default domain: %w", err)
 	}
@@ -305,8 +307,8 @@ func (w *Webspace) AddDomain(domain string) error {
 }
 
 // RemoveDomain removes an existing domain
-func (w *Webspace) RemoveDomain(domain string) error {
-	u, err := w.GetUser()
+func (w *Webspace) RemoveDomain(ctx context.Context, domain string) error {
+	u, err := w.GetUser(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get user: %w", err)
 	}
@@ -607,17 +609,19 @@ func (w *Webspace) ClearLog() error {
 }
 
 // Sync forces configuration for a webspace to be re-generated
-func (w *Webspace) Sync() error {
+func (w *Webspace) Sync(ctx context.Context) error {
+	w.manager.Lock(w.UserID)
+	defer w.manager.Unlock(w.UserID)
 	addr, _ := w.GetIP(nil)
 
-	if err := w.manager.traefik.ClearConfig(w.InstanceName()); err != nil {
+	if err := w.manager.traefik.ClearConfig(ctx, w.InstanceName()); err != nil {
 		return fmt.Errorf("failed to clear traefik config: %w", err)
 	}
-	if err := w.manager.traefik.GenerateConfig(w, addr); err != nil {
+	if err := w.manager.traefik.GenerateConfig(ctx, w, addr); err != nil {
 		return fmt.Errorf("failed to update traefik config: %w", err)
 	}
 
-	if err := w.manager.ports.AddAll(w, addr); err != nil {
+	if err := w.manager.ports.AddAll(ctx, w, addr); err != nil {
 		return fmt.Errorf("failed to set up port forwards: %w", err)
 	}
 

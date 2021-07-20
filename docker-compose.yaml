@@ -35,11 +35,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.dev
-    env_file: .env
     environment:
       - WSD_LOG_LEVEL=debug
-      - WSD_IAM_URL=http://localhost:8080/v1
-      - WSD_IAM_ALLOW_INSECURE=true
       - WSD_LXD_TLS_ALLOW_INSECURE=true
       - WSD_LXD_TLS_CLIENT_CERT_FILE=/run/certs/client.crt
       - WSD_LXD_TLS_CLIENT_KEY_FILE=/run/certs/client.key

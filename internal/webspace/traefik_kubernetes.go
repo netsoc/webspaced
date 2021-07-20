@@ -87,9 +87,7 @@ func NewTraefikKubernetes(cfg *config.Config) (Traefik, error) {
 }
 
 // ClearConfig cleans out any configuration for an instance
-func (t *TraefikKubernetes) ClearConfig(n string) error {
-	ctx := context.Background()
-
+func (t *TraefikKubernetes) ClearConfig(ctx context.Context, n string) error {
 	if _, err := t.irTCPAPI.Get(ctx, n, k8sMeta.GetOptions{}); err != nil {
 		if !k8sErrors.IsNotFound(err) {
 			return fmt.Errorf("failed to get Traefik IngressRouteTCP CRD: %w", err)
@@ -150,7 +148,7 @@ func (t *TraefikKubernetes) ClearConfig(n string) error {
 }
 
 // GenerateConfig generates new Traefik configuration for a webspace
-func (t *TraefikKubernetes) GenerateConfig(ws *Webspace, addr string) error {
+func (t *TraefikKubernetes) GenerateConfig(ctx context.Context, ws *Webspace, addr string) error {
 	if addr == "" && t.config.Traefik.WebspacedURL == "" {
 		// Traefik hooks (only used when webspaces aren't running) are disabled
 		return nil
@@ -158,12 +156,12 @@ func (t *TraefikKubernetes) GenerateConfig(ws *Webspace, addr string) error {
 
 	n := ws.InstanceName()
 
-	user, err := ws.GetUser()
+	user, err := ws.GetUser(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get user: %w", err)
 	}
 
-	domains, err := ws.GetDomains()
+	domains, err := ws.GetDomains(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get webspace domains: %w", err)
 	}
@@ -173,8 +171,6 @@ func (t *TraefikKubernetes) GenerateConfig(ws *Webspace, addr string) error {
 		IAMToken: t.config.Traefik.IAMToken,
 		UserID:   ws.UserID,
 	}
-
-	ctx := context.Background()
 
 	ep := k8sCore.Endpoints{
 		ObjectMeta: k8sMeta.ObjectMeta{

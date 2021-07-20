@@ -1,11 +1,13 @@
 package webspace
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 
 	lxd "github.com/lxc/lxd/client"
 	lxdApi "github.com/lxc/lxd/shared/api"
@@ -21,6 +23,7 @@ type Manager struct {
 	lxd    lxd.InstanceServer
 	iam    *iam.APIClient
 
+	locks          sync.Map
 	lxdWsUserRegex *regexp.Regexp
 	lxdListener    *lxd.EventListener
 	traefik        Traefik
@@ -49,15 +52,27 @@ func NewManager(cfg *config.Config, iam *iam.APIClient, l lxd.InstanceServer) (*
 	}
 
 	return &Manager{
-		cfg,
-		l,
-		iam,
+		config: cfg,
+		lxd:    l,
+		iam:    iam,
 
-		regexp.MustCompile(fmt.Sprintf(lxdEventUserRegexTpl, cfg.Webspaces.InstancePrefix)),
-		nil,
-		traefik,
-		ports,
+		lxdWsUserRegex: regexp.MustCompile(fmt.Sprintf(lxdEventUserRegexTpl, cfg.Webspaces.InstancePrefix)),
+		lxdListener:    nil,
+		traefik:        traefik,
+		ports:          ports,
 	}, nil
+}
+
+// Lock locks a webspace
+func (m *Manager) Lock(uid int) {
+	v, _ := m.locks.LoadOrStore(uid, &sync.Mutex{})
+	v.(*sync.Mutex).Lock()
+}
+
+// Unlock unlocks a webspace
+func (m *Manager) Unlock(uid int) {
+	v, _ := m.locks.Load(uid)
+	v.(*sync.Mutex).Unlock()
 }
 
 // Start starts the webspace manager
@@ -67,6 +82,7 @@ func (m *Manager) Start() error {
 		return fmt.Errorf("failed to retrieve all webspaces: %w", err)
 	}
 
+	var wg sync.WaitGroup
 	for _, w := range webspaces {
 		state, _, err := m.lxd.GetInstanceState(w.InstanceName())
 		if err != nil {
@@ -79,39 +95,55 @@ func (m *Manager) Start() error {
 			"running": running,
 		}).Debug("Generating initial Traefik / port forwarding config")
 
-		var addr string
-		if running {
-			addr, err = w.AwaitIP()
-			if err != nil {
-				return fmt.Errorf("failed to get instance IP address: %w", err)
+		wg.Add(1)
+		ws := w
+		go func() {
+			defer wg.Done()
+			if err := func() error {
+				var addr string
+				if running {
+					addr, err = ws.AwaitIP()
+					if err != nil {
+						return fmt.Errorf("failed to get instance IP address: %w", err)
+					}
+				}
+
+				ctx := context.Background()
+				if err := m.traefik.ClearConfig(ctx, ws.InstanceName()); err != nil {
+					return fmt.Errorf("failed to clear traefik config: %w", err)
+				}
+				if err := m.traefik.GenerateConfig(ctx, ws, addr); err != nil {
+					return fmt.Errorf("failed to update traefik config: %w", err)
+				}
+
+				if err := m.ports.AddAll(ctx, ws, addr); err != nil {
+					return fmt.Errorf("failed to set up port forwards: %w", err)
+				}
+
+				return nil
+			}(); err != nil {
+				log.WithError(err).WithField("uid", ws.UserID).Error("Failed to generate initial config")
 			}
-		}
-
-		if err := m.traefik.ClearConfig(w.InstanceName()); err != nil {
-			return fmt.Errorf("failed to clear traefik config: %w", err)
-		}
-		if err := m.traefik.GenerateConfig(w, addr); err != nil {
-			return fmt.Errorf("failed to update traefik config: %w", err)
-		}
-
-		if err := m.ports.AddAll(w, addr); err != nil {
-			return fmt.Errorf("failed to set up port forwards: %w", err)
-		}
+		}()
 	}
+	wg.Wait()
 
 	m.lxdListener, err = m.lxd.GetEvents()
 	if err != nil {
 		return fmt.Errorf("failed to get LXD event listener: %w", convertLXDError(err))
 	}
-	m.lxdListener.AddHandler([]string{"lifecycle"}, m.onLxdEvent)
+	_, err = m.lxdListener.AddHandler([]string{"lifecycle"}, m.onLxdEvent)
+	if err != nil {
+		return fmt.Errorf("failed to add LXD event handler: %w", convertLXDError(err))
+	}
 
 	return nil
 }
 
 // Shutdown stops the webspace manager
-func (m *Manager) Shutdown() {
+func (m *Manager) Shutdown(ctx context.Context) {
 	m.lxdListener.Disconnect()
-	m.ports.Shutdown()
+	m.ports.Shutdown(ctx)
 }
 
 func (m *Manager) lxdInstanceName(uid int) string {
@@ -141,7 +173,11 @@ func (m *Manager) onLxdEvent(e lxdApi.Event) {
 		return
 	}
 
-	if err := m.traefik.ClearConfig(m.lxdInstanceName(uid)); err != nil {
+	ctx := context.Background()
+	m.Lock(uid)
+	defer m.Unlock(uid)
+
+	if err := m.traefik.ClearConfig(ctx, m.lxdInstanceName(uid)); err != nil {
 		log.WithField("uid", uid).WithError(err).Error("Failed to clear Traefik config")
 		return
 	}
@@ -151,7 +187,7 @@ func (m *Manager) onLxdEvent(e lxdApi.Event) {
 		log.WithError(err).Error("Failed to get all webspaces")
 		return
 	}
-	if err := m.ports.Trim(all); err != nil {
+	if err := m.ports.Trim(ctx, all); err != nil {
 		log.WithError(err).Error("Failed to trim port forwards")
 		return
 	}
@@ -206,14 +242,15 @@ func (m *Manager) onLxdEvent(e lxdApi.Event) {
 	log.WithFields(log.Fields{
 		"uid":     w.UserID,
 		"running": running,
+		"action":  action,
 	}).Debug("Updating Traefik / port forward config")
 
-	if err := m.traefik.GenerateConfig(w, addr); err != nil {
+	if err := m.traefik.GenerateConfig(ctx, w, addr); err != nil {
 		log.WithField("user", w.UserID).WithError(err).Error("Failed to update Traefik config")
 		return
 	}
 
-	if err := m.ports.AddAll(w, addr); err != nil {
+	if err := m.ports.AddAll(ctx, w, addr); err != nil {
 		log.WithField("user", w.UserID).WithError(err).Error("Failed to update port forwards")
 	}
 }
@@ -327,6 +364,9 @@ func (m *Manager) GetAll() ([]*Webspace, error) {
 
 // Create creates a new webspace container via LXD
 func (m *Manager) Create(uid int, image string, password string, sshKey string) (*Webspace, error) {
+	m.Lock(uid)
+	defer m.Unlock(uid)
+
 	w := &Webspace{
 		manager: m,
 

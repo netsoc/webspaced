@@ -123,6 +123,7 @@ type PortsManager struct {
 	svcName string
 	svcAPI  k8sTypedCore.ServiceInterface
 
+	lock     sync.Mutex
 	forwards map[uint16]*PortForward
 }
 
@@ -151,7 +152,7 @@ func NewPortsManager(cfg *config.Config) (*PortsManager, error) {
 }
 
 // Add creates a new port forwarding
-func (p *PortsManager) Add(e uint16, backendAddr *net.TCPAddr, hook PortHook) error {
+func (p *PortsManager) Add(ctx context.Context, e uint16, backendAddr *net.TCPAddr, hook PortHook) error {
 	if _, ok := p.forwards[e]; ok {
 		return util.ErrUsed
 	}
@@ -165,8 +166,6 @@ func (p *PortsManager) Add(e uint16, backendAddr *net.TCPAddr, hook PortHook) er
 	p.forwards[e] = forward
 
 	if p.svcName != "" {
-		ctx := context.Background()
-
 		if err := k8sRetry.RetryOnConflict(k8sRetry.DefaultRetry, func() error {
 			svc, err := p.svcAPI.Get(ctx, p.svcName, k8sMeta.GetOptions{})
 			if err != nil {
@@ -206,15 +205,13 @@ func (p *PortsManager) Add(e uint16, backendAddr *net.TCPAddr, hook PortHook) er
 }
 
 // Remove stops and removes a port forwarding
-func (p *PortsManager) Remove(e uint16) error {
+func (p *PortsManager) Remove(ctx context.Context, e uint16) error {
 	forward, ok := p.forwards[e]
 	if !ok {
 		return util.ErrNotFound
 	}
 
 	if p.svcName != "" {
-		ctx := context.Background()
-
 		if err := k8sRetry.RetryOnConflict(k8sRetry.DefaultRetry, func() error {
 			svc, err := p.svcAPI.Get(ctx, p.svcName, k8sMeta.GetOptions{})
 			if err != nil {
@@ -256,7 +253,7 @@ func (p *PortsManager) Remove(e uint16) error {
 }
 
 // Trim removes port forwards that have been deleted
-func (p *PortsManager) Trim(all []*Webspace) error {
+func (p *PortsManager) Trim(ctx context.Context, all []*Webspace) error {
 	allPorts := make(map[uint16]struct{})
 	for _, w := range all {
 		for e := range w.Ports {
@@ -270,17 +267,17 @@ func (p *PortsManager) Trim(all []*Webspace) error {
 
 	for e := range p.forwards {
 		if _, ok := allPorts[e]; !ok {
-			p.Remove(e)
+			p.Remove(ctx, e)
 		}
 	}
 	return nil
 }
 
 // AddAll adds / updates port forwards for a given webspace
-func (p *PortsManager) AddAll(w *Webspace, addr string) error {
+func (p *PortsManager) AddAll(ctx context.Context, w *Webspace, addr string) error {
 	for e, i := range w.Ports {
 		if _, ok := p.forwards[e]; ok {
-			p.Remove(e)
+			p.Remove(ctx, e)
 		}
 
 		hook := func(f *PortForward) error {
@@ -315,7 +312,7 @@ func (p *PortsManager) AddAll(w *Webspace, addr string) error {
 			hook = func(_ *PortForward) error { return nil }
 		}
 
-		if err := p.Add(e, backendAddr, hook); err != nil {
+		if err := p.Add(ctx, e, backendAddr, hook); err != nil {
 			return fmt.Errorf("failed to add port forward for: %w", err)
 		}
 	}
@@ -324,8 +321,8 @@ func (p *PortsManager) AddAll(w *Webspace, addr string) error {
 }
 
 // Shutdown stops and removes all port forwards
-func (p *PortsManager) Shutdown() {
+func (p *PortsManager) Shutdown(ctx context.Context) {
 	for e := range p.forwards {
-		p.Remove(e)
+		p.Remove(ctx, e)
 	}
 }

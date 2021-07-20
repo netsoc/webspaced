@@ -80,7 +80,7 @@ func (s *Server) apiSetWebspaceState(w http.ResponseWriter, r *http.Request) {
 	case "POST":
 		err = ws.Boot()
 	case "PATCH":
-		err = ws.Sync()
+		err = ws.Sync(r.Context())
 	case "PUT":
 		err = ws.Reboot()
 	case "DELETE":
@@ -126,7 +126,7 @@ func (s *Server) apiUpdateWebspaceConfig(w http.ResponseWriter, r *http.Request)
 
 func (s *Server) apiGetWebspaceDomains(w http.ResponseWriter, r *http.Request) {
 	ws := r.Context().Value(keyWebspace).(*webspace.Webspace)
-	domains, err := ws.GetDomains()
+	domains, err := ws.GetDomains(r.Context())
 	if err != nil {
 		util.JSONErrResponse(w, err, 0)
 		return
@@ -143,7 +143,7 @@ func (s *Server) apiWebspaceDomain(w http.ResponseWriter, r *http.Request) {
 	case "POST":
 		err = ws.AddDomain(d)
 	case "DELETE":
-		err = ws.RemoveDomain(d)
+		err = ws.RemoveDomain(r.Context(), d)
 	}
 	if err != nil {
 		util.JSONErrResponse(w, err, 0)
