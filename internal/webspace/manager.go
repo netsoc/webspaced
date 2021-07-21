@@ -8,7 +8,9 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
+	"github.com/cenkalti/backoff/v4"
 	lxd "github.com/lxc/lxd/client"
 	lxdApi "github.com/lxc/lxd/shared/api"
 	iam "github.com/netsoc/iam/client"
@@ -26,6 +28,7 @@ type Manager struct {
 	locks          sync.Map
 	lxdWsUserRegex *regexp.Regexp
 	lxdListener    *lxd.EventListener
+	lxdOK          bool
 	traefik        Traefik
 	ports          *PortsManager
 }
@@ -63,6 +66,21 @@ func NewManager(cfg *config.Config, iam *iam.APIClient, l lxd.InstanceServer) (*
 	}, nil
 }
 
+func (m *Manager) setupLXDListener() error {
+	l, err := m.lxd.GetEvents()
+	if err != nil {
+		return err
+	}
+
+	_, err = l.AddHandler([]string{"lifecycle"}, m.onLxdEvent)
+	if err != nil {
+		return fmt.Errorf("failed to add LXD event handler: %w", convertLXDError(err))
+	}
+
+	m.lxdListener = l
+	return nil
+}
+
 // Lock locks a webspace
 func (m *Manager) Lock(uid int) {
 	v, _ := m.locks.LoadOrStore(uid, &sync.Mutex{})
@@ -75,11 +93,13 @@ func (m *Manager) Unlock(uid int) {
 	v.(*sync.Mutex).Unlock()
 }
 
-// Start starts the webspace manager
-func (m *Manager) Start() error {
+func (m *Manager) syncAll(ctx context.Context) error {
 	webspaces, err := m.GetAll()
 	if err != nil {
 		return fmt.Errorf("failed to retrieve all webspaces: %w", err)
+	}
+	if err := m.ports.Trim(ctx, webspaces); err != nil {
+		return fmt.Errorf("failed to trim port forwards: %w", err)
 	}
 
 	var wg sync.WaitGroup
@@ -93,7 +113,7 @@ func (m *Manager) Start() error {
 		log.WithFields(log.Fields{
 			"uid":     w.UserID,
 			"running": running,
-		}).Debug("Generating initial Traefik / port forwarding config")
+		}).Debug("Syncing Traefik / port forwarding config")
 
 		wg.Add(1)
 		ws := w
@@ -108,7 +128,6 @@ func (m *Manager) Start() error {
 					}
 				}
 
-				ctx := context.Background()
 				if err := m.traefik.ClearConfig(ctx, ws.InstanceName()); err != nil {
 					return fmt.Errorf("failed to clear traefik config: %w", err)
 				}
@@ -122,27 +141,85 @@ func (m *Manager) Start() error {
 
 				return nil
 			}(); err != nil {
-				log.WithError(err).WithField("uid", ws.UserID).Error("Failed to generate initial config")
+				log.
+					WithError(err).
+					WithField("uid", ws.UserID).
+					Error("Failed to sync config")
 			}
 		}()
 	}
 	wg.Wait()
 
-	m.lxdListener, err = m.lxd.GetEvents()
-	if err != nil {
-		return fmt.Errorf("failed to get LXD event listener: %w", convertLXDError(err))
+	return nil
+}
+
+// Start starts the webspace manager
+func (m *Manager) Start(ctx context.Context) error {
+	log.Info("Generating initial Traefik / port forwarding configs")
+	if err := m.syncAll(ctx); err != nil {
+		return fmt.Errorf("failed to sync Traefik / port forwarding configs: %w", err)
 	}
-	_, err = m.lxdListener.AddHandler([]string{"lifecycle"}, m.onLxdEvent)
-	if err != nil {
-		return fmt.Errorf("failed to add LXD event handler: %w", convertLXDError(err))
+
+	if err := m.setupLXDListener(); err != nil {
+		return fmt.Errorf("failed to set up LXD event listener: %w", convertLXDError(err))
 	}
+	m.lxdOK = true
+
+	go func() {
+		back := backoff.NewExponentialBackOff()
+		back.MaxElapsedTime = 0
+
+		for {
+			if err := m.lxdListener.Wait(); err != nil {
+				log.
+					WithError(err).
+					Warn("LXD event listener failed, restarting...")
+				m.lxdListener = nil
+				m.lxdOK = false
+
+				back.Reset()
+				backoff.RetryNotify(m.setupLXDListener, back, func(err error, retry time.Duration) {
+					log.
+						WithError(err).
+						WithField("retry", retry).
+						Warn("LXD event listener reconnect failed, retrying...")
+				})
+				log.Info("LXD listener reconnect succeeded")
+
+				log.Info("Re-syncing all configs after listener reconnect")
+				back.Reset()
+				backoff.RetryNotify(func() error {
+					ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+					defer cancel()
+					return m.syncAll(ctx)
+				}, back, func(err error, retry time.Duration) {
+					log.
+						WithError(err).
+						WithField("retry", retry).
+						Warn("Webspace config sync failed, retrying...")
+				})
+
+				m.lxdOK = true
+				continue
+			}
+
+			return
+		}
+	}()
 
 	return nil
 }
 
+// Healthy returns true if the manager is healthy
+func (m *Manager) Healthy() bool {
+	return m.lxdOK
+}
+
 // Shutdown stops the webspace manager
 func (m *Manager) Shutdown(ctx context.Context) {
-	m.lxdListener.Disconnect()
+	if m.lxdListener != nil {
+		m.lxdListener.Disconnect()
+	}
 	m.ports.Shutdown(ctx)
 }
 

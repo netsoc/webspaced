@@ -123,7 +123,6 @@ type PortsManager struct {
 	svcName string
 	svcAPI  k8sTypedCore.ServiceInterface
 
-	lock     sync.Mutex
 	forwards map[uint16]*PortForward
 }
 

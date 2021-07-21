@@ -30,9 +30,6 @@ type createWebspaceReq struct {
 	Password string `json:"password"`
 	SSH      bool   `json:"ssh"`
 }
-type createWebspaceRes struct {
-	SSHPort uint16 `json:"sshPort"`
-}
 
 func (s *Server) apiGetWebspace(w http.ResponseWriter, r *http.Request) {
 	ws := r.Context().Value(keyWebspace).(*webspace.Webspace)

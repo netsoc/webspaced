@@ -543,7 +543,7 @@ func (w *Webspace) State() (State, error) {
 			return State{}, fmt.Errorf("failed to get instance from LXD: %w", convertLXDError(err))
 		}
 
-		s.Uptime = time.Now().Sub(i.LastUsedAt).Seconds()
+		s.Uptime = time.Since(i.LastUsedAt).Seconds()
 	}
 
 	for name, info := range ls.Disk {

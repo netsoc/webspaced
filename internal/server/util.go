@@ -128,7 +128,7 @@ func (s *Server) getWebspaceMiddleware(next http.Handler) http.Handler {
 		user := r.Context().Value(keyUser).(*iam.User)
 		ws, err := s.Webspaces.Get(int(user.Id), user)
 		if err != nil {
-			util.JSONErrResponse(w, err, util.ErrToStatus(err))
+			util.JSONErrResponse(w, err, 0)
 			return
 		}
 

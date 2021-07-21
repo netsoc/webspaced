@@ -122,7 +122,7 @@ func NewServer(config config.Config) *Server {
 }
 
 // Start begins listening
-func (s *Server) Start() error {
+func (s *Server) Start(ctx context.Context) error {
 	var err error
 	s.lxd, err = lxd.ConnectLXD(s.Config.LXD.URL, &lxd.ConnectionArgs{
 		TLSCA:              s.Config.LXD.TLS.CA,
@@ -139,7 +139,7 @@ func (s *Server) Start() error {
 	if err != nil {
 		return fmt.Errorf("failed to create webspace manager: %w", err)
 	}
-	if err := s.Webspaces.Start(); err != nil {
+	if err := s.Webspaces.Start(ctx); err != nil {
 		return fmt.Errorf("failed to start webspace manager: %w", err)
 	}
 
@@ -157,6 +157,9 @@ func (s *Server) Stop(ctx context.Context) error {
 	}
 
 	s.Webspaces.Shutdown(ctx)
+
+	s.lxd.Disconnect()
+
 	return nil
 }
 
@@ -169,5 +172,10 @@ func apiMethodNotAllowed(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) healthCheck(w http.ResponseWriter, r *http.Request) {
+	if !s.Webspaces.Healthy() {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
 	w.WriteHeader(http.StatusNoContent)
 }

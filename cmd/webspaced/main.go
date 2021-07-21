@@ -120,7 +120,9 @@ func reload() {
 
 	log.Info("Starting server")
 	go func() {
-		if err := srv.Start(); err != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+		defer cancel()
+		if err := srv.Start(ctx); err != nil {
 			log.WithError(err).Fatal("Failed to start server")
 		}
 	}()
@@ -134,6 +136,8 @@ func stop() {
 	if err := srv.Stop(ctx); err != nil {
 		log.WithError(err).Fatal("Failed to stop server")
 	}
+
+	log.Info("Stopped server sucessfully")
 }
 
 func main() {
