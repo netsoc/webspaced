@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"net/http"
 
-	httpswagger "github.com/devplayer0/http-swagger"
+	oapiMiddleware "github.com/go-openapi/runtime/middleware"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	lxd "github.com/lxc/lxd/client"
@@ -108,10 +108,10 @@ func NewServer(config config.Config) *Server {
 	internalWsOpRouter.HandleFunc("/ensure-started", s.internalAPIEnsureStarted).Methods("POST")
 
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(data.AssetFile())))
-	r.PathPrefix("/swagger/").Handler(httpswagger.Handler(
-		httpswagger.URL("/static/api.yaml"),
-		httpswagger.PersistAuth(true),
-	))
+	r.PathPrefix("/swagger").Handler(oapiMiddleware.SwaggerUI(oapiMiddleware.SwaggerUIOpts{
+		SpecURL: "/static/api.yaml",
+		Path:    "swagger",
+	}, nil))
 
 	r.HandleFunc("/health", s.healthCheck)
 
