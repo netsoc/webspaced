@@ -184,7 +184,7 @@ func (p *PortsManager) Add(ctx context.Context, e uint16, backendAddr *net.TCPAd
 					log.WithFields(log.Fields{
 						"ePort":   e,
 						"backend": backendAddr,
-					}).Warn("Kubernetes Service port already existed, overwriting")
+					}).Debug("Kubernetes Service port already existed, overwriting")
 					svc.Spec.Ports[i] = svcPort
 					existing = true
 				}
@@ -204,13 +204,13 @@ func (p *PortsManager) Add(ctx context.Context, e uint16, backendAddr *net.TCPAd
 }
 
 // Remove stops and removes a port forwarding
-func (p *PortsManager) Remove(ctx context.Context, e uint16) error {
+func (p *PortsManager) Remove(ctx context.Context, e uint16, updateK8s bool) error {
 	forward, ok := p.forwards[e]
 	if !ok {
 		return util.ErrNotFound
 	}
 
-	if p.svcName != "" {
+	if p.svcName != "" && updateK8s {
 		if err := k8sRetry.RetryOnConflict(k8sRetry.DefaultRetry, func() error {
 			svc, err := p.svcAPI.Get(ctx, p.svcName, k8sMeta.GetOptions{})
 			if err != nil {
@@ -266,7 +266,7 @@ func (p *PortsManager) Trim(ctx context.Context, all []*Webspace) error {
 
 	for e := range p.forwards {
 		if _, ok := allPorts[e]; !ok {
-			p.Remove(ctx, e)
+			p.Remove(ctx, e, true)
 		}
 	}
 	return nil
@@ -275,8 +275,12 @@ func (p *PortsManager) Trim(ctx context.Context, all []*Webspace) error {
 // AddAll adds / updates port forwards for a given webspace
 func (p *PortsManager) AddAll(ctx context.Context, w *Webspace, addr string) error {
 	for e, i := range w.Ports {
+		// Using an existing port forward is validated externally - if this exists it belongs to us
 		if _, ok := p.forwards[e]; ok {
-			p.Remove(ctx, e)
+			// Don't trigger a change in Kubernetes!
+			if err := p.Remove(ctx, e, false); err != nil {
+				return fmt.Errorf("failed to remove existing port forward: %w", err)
+			}
 		}
 
 		hook := func(f *PortForward) error {
@@ -322,6 +326,6 @@ func (p *PortsManager) AddAll(ctx context.Context, w *Webspace, addr string) err
 // Shutdown stops and removes all port forwards
 func (p *PortsManager) Shutdown(ctx context.Context) {
 	for e := range p.forwards {
-		p.Remove(ctx, e)
+		p.Remove(ctx, e, true)
 	}
 }
