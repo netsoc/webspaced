@@ -25,12 +25,14 @@ type Manager struct {
 	lxd    lxd.InstanceServer
 	iam    *iam.APIClient
 
-	locks          sync.Map
 	lxdWsUserRegex *regexp.Regexp
 	lxdListener    *lxd.EventListener
+	lxdLastEvent   time.Time
 	lxdOK          bool
-	traefik        Traefik
-	ports          *PortsManager
+
+	locks   sync.Map
+	traefik Traefik
+	ports   *PortsManager
 }
 
 // NewManager returns a new Manager instance
@@ -233,6 +235,13 @@ type lxdEventDetails struct {
 }
 
 func (m *Manager) onLxdEvent(e lxdApi.Event) {
+	if e.Timestamp == m.lxdLastEvent {
+		// TODO: Why does this happen?
+		log.Warn("Duplicate LXD event detected, ignoring")
+		return
+	}
+	m.lxdLastEvent = e.Timestamp
+
 	var details lxdEventDetails
 	if err := json.Unmarshal(e.Metadata, &details); err != nil {
 		// Event doesn't have the fields we want, ignore
@@ -287,7 +296,7 @@ func (m *Manager) onLxdEvent(e lxdApi.Event) {
 
 	var running bool
 	switch action {
-	case "started":
+	case "started", "restarted":
 		running = true
 	case "shutdown", "created":
 		running = false
