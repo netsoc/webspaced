@@ -10,6 +10,7 @@ import (
 	"math/rand"
 	"net"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/cenkalti/backoff/v4"
@@ -24,14 +25,16 @@ const lxdConfigKey = "user._webspaced"
 
 // convertLXDError is a HACK: LXD doesn't seem to return a code we can use to determine the error...
 func convertLXDError(err error) error {
-	switch err.Error() {
-	case "not found", "No such object":
+
+	m := err.Error()
+	switch {
+	case strings.Contains(m, "not found"), strings.Contains(m, "No such object"):
 		return util.ErrGenericNotFound
-	case "Create instance: Add instance info to the database: This instance already exists":
+	case strings.Contains(m, "already exists"):
 		return util.ErrExists
-	case "The container is already stopped":
+	case strings.Contains(m, "already stopped"):
 		return util.ErrNotRunning
-	case "Common start logic: The container is already running":
+	case strings.Contains(m, "already running"):
 		return util.ErrRunning
 
 	default:
