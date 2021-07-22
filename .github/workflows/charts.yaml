@@ -9,10 +9,11 @@ on:
 
 jobs:
   sync:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
 
     env:
       CHARTS_REPO: netsoc/charts
+      CHARTS_SUBDIR: webspaced
 
     steps:
       - name: Checkout main repo
@@ -30,6 +31,7 @@ jobs:
 
       - name: Update charts in main repo
         run: |
+          rm -rf "charts/$CHARTS_SUBDIR"
           cp -a ../main/charts/ ./
 
           git config --local user.email "action@github.com"
