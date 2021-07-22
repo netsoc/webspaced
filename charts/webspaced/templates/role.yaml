@@ -11,6 +11,7 @@ rules:
       - endpoints
       - services
       - middlewares
+      - middlewaretcps
       - ingressroutes
       - ingressroutetcps
       - certificates
