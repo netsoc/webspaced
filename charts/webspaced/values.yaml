@@ -28,11 +28,14 @@ global:
 service:
   type: ClusterIP
   port: 80
+  annotations: {}
+  spec: {}
 fwdService:
   enabled: true
   type: LoadBalancer
   dummyPort: 6969
   annotations: {}
+  spec: {}
 
 ingress:
   enabled: false

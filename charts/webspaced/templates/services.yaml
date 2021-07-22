@@ -7,6 +7,9 @@ metadata:
     {{- include "webspaced.labels" . | nindent 4 }}
 spec:
   type: {{ .Values.service.type }}
+  {{- with .Values.service.spec }}
+  {{- toYaml . | nindent 2 }}
+  {{- end }}
   ports:
     - port: {{ .Values.service.port }}
       targetPort: http
@@ -28,6 +31,9 @@ metadata:
     {{- include "webspaced.labels" . | nindent 4 }}
 spec:
   type: {{ .Values.fwdService.type }}
+  {{- with .Values.fwdService.spec }}
+  {{- toYaml . | nindent 2 }}
+  {{- end }}
   ports:
     - port: {{ .Values.fwdService.dummyPort }}
       targetPort: {{ .Values.fwdService.dummyPort }}
