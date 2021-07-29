@@ -55,10 +55,16 @@ spec:
             - name: http
               containerPort: 80
               protocol: TCP
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            {{- toYaml .Values.startupProbe | nindent 12 }}
           livenessProbe:
             httpGet:
               path: /health
               port: http
+            {{- toYaml .Values.livenessProbe | nindent 12 }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           volumeMounts:
@@ -98,6 +104,7 @@ spec:
           volumeMounts:
             - name: kubelan-config
               mountPath: /run/config
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
       volumes:
         - name: config
           configMap:
