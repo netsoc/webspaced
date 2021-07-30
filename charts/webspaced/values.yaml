@@ -81,6 +81,9 @@ affinity: {}
 
 config:
   log_level: DEBUG
+  timeouts:
+    startup: 30s
+    shutdown: 30s
   iam:
     url: 'https://iam.netsoc.ie/v1'
     allow_insecure: false
