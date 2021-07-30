@@ -326,6 +326,11 @@ func (p *PortsManager) AddAll(ctx context.Context, w *Webspace, addr string) err
 // Shutdown stops and removes all port forwards
 func (p *PortsManager) Shutdown(ctx context.Context) {
 	for e := range p.forwards {
-		p.Remove(ctx, e, true)
+		if err := p.Remove(ctx, e, true); err != nil {
+			log.
+				WithField("ePort", e).
+				WithError(err).
+				Warn("Failed to remove port forward")
+		}
 	}
 }

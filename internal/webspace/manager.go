@@ -96,6 +96,9 @@ func (m *Manager) Unlock(uid int) {
 }
 
 func (m *Manager) syncAll(ctx context.Context) error {
+	log.Debug("Clearing all existing Traefik configs")
+	m.traefik.ClearAll(ctx)
+
 	webspaces, err := m.GetAll()
 	if err != nil {
 		return fmt.Errorf("failed to retrieve all webspaces: %w", err)
@@ -223,6 +226,10 @@ func (m *Manager) Shutdown(ctx context.Context) {
 		m.lxdListener.Disconnect()
 	}
 	m.ports.Shutdown(ctx)
+
+	if err := m.traefik.ClearAll(ctx); err != nil {
+		log.WithError(err).Warn("Failed to clear Traefik configs")
+	}
 }
 
 func (m *Manager) lxdInstanceName(uid int) string {

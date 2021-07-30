@@ -11,6 +11,8 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// TODO: Get this working with new Traefik fork!
+
 // TraefikRedis manages webspace configuration for Traefik via Redis
 type TraefikRedis struct {
 	config *config.Config
@@ -28,6 +30,11 @@ func NewTraefikRedis(cfg *config.Config) Traefik {
 		cfg,
 		client,
 	}
+}
+
+func (t *TraefikRedis) ClearAll(ctx context.Context) error {
+	// TODO: Implement!
+	return nil
 }
 
 // ClearConfig cleans out any configuration for an instance

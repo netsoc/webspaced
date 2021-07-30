@@ -1,4 +1,7 @@
 log_level: TRACE
+timeouts:
+  startup: 30s
+  shutdown: 30s
 iam:
   url: 'https://iam.netsoc.ie/v1'
   token: A.B.C

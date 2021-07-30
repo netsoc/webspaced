@@ -86,6 +86,62 @@ func NewTraefikKubernetes(cfg *config.Config) (Traefik, error) {
 	}, nil
 }
 
+func (t *TraefikKubernetes) ClearAll(ctx context.Context) error {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	selector := k8sMeta.FormatLabelSelector(&k8sMeta.LabelSelector{MatchLabels: k8sLabels})
+	listOpts := k8sMeta.ListOptions{
+		LabelSelector: selector,
+	}
+
+	if err := t.irTCPAPI.DeleteCollection(ctx, k8sMeta.DeleteOptions{}, listOpts); err != nil {
+		return fmt.Errorf("failed to delete Traefik IngressRouteTCP CRDs: %w", err)
+	}
+	if err := t.irAPI.DeleteCollection(ctx, k8sMeta.DeleteOptions{}, listOpts); err != nil {
+		return fmt.Errorf("failed to delete Traefik IngressRoute CRDs: %w", err)
+	}
+
+	if err := t.tcpMWAPI.DeleteCollection(ctx, k8sMeta.DeleteOptions{}, listOpts); err != nil {
+		return fmt.Errorf("failed to delete Traefik TCP Middleware CRDs: %w", err)
+	}
+	if err := t.mwAPI.DeleteCollection(ctx, k8sMeta.DeleteOptions{}, listOpts); err != nil {
+		return fmt.Errorf("failed to delete Traefik Middleware CRDs: %w", err)
+	}
+
+	if err := t.certManagerAPI.DeleteCollection(ctx, k8sMeta.DeleteOptions{}, listOpts); err != nil {
+		return fmt.Errorf("failed to delete cert-manager Certificates: %w", err)
+	}
+
+	svcList, err := t.svcAPI.List(ctx, listOpts)
+	if err != nil {
+		return fmt.Errorf("failed to list Services: %w", err)
+	}
+
+	errChan := make(chan error, len(svcList.Items))
+	for _, s := range svcList.Items {
+		n := s.Name
+		go func() {
+			if err := t.svcAPI.Delete(ctx, n, k8sMeta.DeleteOptions{}); err != nil {
+				errChan <- fmt.Errorf("failed to delete Service %v: %w", n, err)
+			}
+
+			errChan <- nil
+		}()
+	}
+	for i := 0; i < len(svcList.Items); i++ {
+		if err := <-errChan; err != nil {
+			return err
+		}
+	}
+
+	if err := t.epAPI.DeleteCollection(ctx, k8sMeta.DeleteOptions{}, listOpts); err != nil {
+		return fmt.Errorf("failed to delete Endpoints: %w", err)
+	}
+
+	return nil
+}
+
 // ClearConfig cleans out any configuration for an instance
 func (t *TraefikKubernetes) ClearConfig(ctx context.Context, n string) error {
 	if _, err := t.irTCPAPI.Get(ctx, n, k8sMeta.GetOptions{}); err != nil {
@@ -95,7 +151,6 @@ func (t *TraefikKubernetes) ClearConfig(ctx context.Context, n string) error {
 	} else if err := t.irTCPAPI.Delete(ctx, n, k8sMeta.DeleteOptions{}); err != nil {
 		return fmt.Errorf("failed to delete Traefik IngressRouteTCP CRD: %w", err)
 	}
-
 	if _, err := t.irAPI.Get(ctx, n, k8sMeta.GetOptions{}); err != nil {
 		if !k8sErrors.IsNotFound(err) {
 			return fmt.Errorf("failed to get Traefik IngressRoute CRD: %w", err)
@@ -111,7 +166,6 @@ func (t *TraefikKubernetes) ClearConfig(ctx context.Context, n string) error {
 	} else if err := t.tcpMWAPI.Delete(ctx, n+"-boot", k8sMeta.DeleteOptions{}); err != nil {
 		return fmt.Errorf("failed to delete Traefik TCP Middleware CRD: %w", err)
 	}
-
 	if _, err := t.mwAPI.Get(ctx, n+"-boot", k8sMeta.GetOptions{}); err != nil {
 		if !k8sErrors.IsNotFound(err) {
 			return fmt.Errorf("failed to get Traefik Middleware CRD: %w", err)

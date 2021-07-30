@@ -13,6 +13,7 @@ import (
 	lxd "github.com/lxc/lxd/client"
 	iam "github.com/netsoc/iam/client"
 	"github.com/rs/cors"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/netsoc/webspaced/internal/config"
 	"github.com/netsoc/webspaced/internal/data"
@@ -142,6 +143,7 @@ func (s *Server) Start(ctx context.Context) error {
 	if err := s.Webspaces.Start(ctx); err != nil {
 		return fmt.Errorf("failed to start webspace manager: %w", err)
 	}
+	log.Info("Webspace manager startup completed")
 
 	if err := s.http.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
 		return fmt.Errorf("failed to start HTTP server: %w", err)

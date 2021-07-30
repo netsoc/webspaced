@@ -57,6 +57,10 @@ type WebspaceConfig struct {
 // Config describes the configuration for Server
 type Config struct {
 	LogLevel log.Level `mapstructure:"log_level"`
+	Timeouts struct {
+		Startup  time.Duration
+		Shutdown time.Duration
+	}
 
 	IAM struct {
 		URL           string

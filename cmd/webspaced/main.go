@@ -23,6 +23,9 @@ func init() {
 	// Config defaults
 	viper.SetDefault("log_level", log.InfoLevel)
 
+	viper.SetDefault("timeouts.startup", 30*time.Second)
+	viper.SetDefault("timeouts.shutdown", 30*time.Second)
+
 	viper.SetDefault("iam.url", "https://iam.netsoc.ie/v1")
 	viper.SetDefault("iam.token", "")
 	viper.SetDefault("iam.token_file", "")
@@ -120,7 +123,7 @@ func reload() {
 
 	log.Info("Starting server")
 	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), cfg.Timeouts.Startup)
 		defer cancel()
 		if err := srv.Start(ctx); err != nil {
 			log.WithError(err).Fatal("Failed to start server")
@@ -131,7 +134,7 @@ func reload() {
 func stop() {
 	log.Info("Stopping server")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), srv.Config.Timeouts.Shutdown)
 	defer cancel()
 	if err := srv.Stop(ctx); err != nil {
 		log.WithError(err).Fatal("Failed to stop server")
