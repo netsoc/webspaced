@@ -1,5 +1,5 @@
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: {{ include "webspaced.fullname" . }}
   labels:
@@ -9,8 +9,6 @@ spec:
   selector:
     matchLabels:
       {{- include "webspaced.selectorLabels" . | nindent 6 }}
-  strategy:
-    type: Recreate
   template:
     metadata:
     {{- with .Values.podAnnotations }}
