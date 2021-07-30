@@ -9,6 +9,7 @@ spec:
   selector:
     matchLabels:
       {{- include "webspaced.selectorLabels" . | nindent 6 }}
+  serviceName: {{ include "webspaced.fullname" . }}
   template:
     metadata:
     {{- with .Values.podAnnotations }}
@@ -43,14 +44,22 @@ spec:
               value: {{ include "webspaced.fullname" . }}-forwarding
           {{- end }}
 
+            {{- if .Values.secrets.iamToken }}
             - name: WSD_IAM_TOKEN_FILE
               value: /run/secrets/webspaced/iam_token.txt
+            {{- end }}
+            {{- if .Values.secrets.lxdKey }}
             - name: WSD_LXD_TLS_CLIENT_KEY_FILE
               value: /run/secrets/webspaced/lxd_client.key
+            {{- end }}
+            {{- if .Values.secrets.lxdTrust }}
             - name: WSD_LXD_TLS_TRUST_PASSWORD_FILE
               value: /run/secrets/webspaced/lxd_trust.txt
+            {{- end }}
+            {{- if .Values.secrets.traefikIAMToken }}
             - name: WSD_TRAEFIK_IAM_TOKEN_FILE
               value: /run/secrets/webspaced/traefik_iam_token.txt
+            {{- end }}
           ports:
             - name: http
               containerPort: 80
