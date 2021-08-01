@@ -95,15 +95,15 @@ webspace! When prompted for a password, enter the same one used with
 `netsoc webspace init`.
 
 === "Linux / macOS"
-    Run `ssh root@myusername.netsoc.ie` (use your own external port):
+    Run `ssh root@forward.netsoc.ie` (use your own external port):
 
     ```
-    $ ssh root@myusername.netsoc.ie -p 64363
-    The authenticity of host '[myusername.netsoc.ie]:64363 ([80.111.124.111]:64363)' can't be established.
+    $ ssh root@forward.netsoc.ie -p 64363
+    The authenticity of host '[forward.netsoc.ie]:64363 ([80.111.124.111]:64363)' can't be established.
     ECDSA key fingerprint is SHA256:zB48NdWJQw1ZJztrt5NdTstgdl5Zj0tEuqOjc914zEs.
     Are you sure you want to continue connecting (yes/no/[fingerprint])? yes
-    Warning: Permanently added '[myusername.netsoc.ie]:64363,[80.111.124.111]:64363' (ECDSA) to the list of known hosts.
-    root@myusername.netsoc.ie's password:
+    Warning: Permanently added '[forward.netsoc.ie]:64363,[80.111.124.111]:64363' (ECDSA) to the list of known hosts.
+    root@forward.netsoc.ie's password:
     Welcome to Ubuntu 20.04.1 LTS (GNU/Linux 5.4.71-netsoc-lxd8s x86_64)
 
     * Documentation:  https://help.ubuntu.com

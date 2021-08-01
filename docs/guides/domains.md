@@ -23,21 +23,20 @@ same. In this guide we'll use [Cloudflare](https://www.cloudflare.com/)
 
 ### CNAME record
 
-The main DNS record you'll need is a `CNAME` or "alias" record. This makes sure
+The main DNS record you'll need is a `CNAME` or `ALIAS` record. This makes sure
 that any requests to your domain are routed to Netsoc's servers. The target for
-the `CNAME` record should be `webspaced.netsoc.ie`. See below for an example:
+the `CNAME` record should be **`ws-http.netsoc.ie`**. See below for an example:
 
 ![Cloudflare CNAME record](../assets/dns_cname.png)
 
-!!! note
+!!! tip
     If you're using Cloudflare, click the cloud icon to disable proxying, it's
     not needed with webspaces.
 
 !!! note
     Some DNS providers might not allow you to put a `CNAME` record at the root
     of your domain. In this case, create an `A` record instead with the
-    following IP address: `80.111.124.111`. Note that this is unfortunately
-    due to change in the future as we upgrade servers. Other providers might
+    following IP address: `134.226.83.100`. Other providers might
     allow you to create a `CNAME` record at the root, but won't correctly set up
     the DNS to point to our servers. You should also try an `A` record if a
     sucessfully created `CNAME` isn't working.

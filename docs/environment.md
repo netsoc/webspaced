@@ -5,9 +5,9 @@
 Each container has the following resources (subject to increase when we get more
 servers!):
 
-- 1 vCPU
-- 1GiB RAM
-- 8GiB storage
+- 4 vCPU
+- 4GiB RAM
+- 32GiB storage
 
 ## Boot policy
 
