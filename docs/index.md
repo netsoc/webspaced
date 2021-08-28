@@ -19,7 +19,7 @@ container. First, you'll need to pick an operating system image to install.
 (This is similar to other cloud providers like AWS or DigitalOcean). To view a
 list of available options, run `netsoc webspace images`:
 
-```bash
+```
 $ netsoc webspace images
 ╭─────────────┬──────────────────────────────────────────┬─────────╮
 │ ALIAS       │ DESCRIPTION                              │ SIZE    │

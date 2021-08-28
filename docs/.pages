@@ -1,1 +1,6 @@
 title: Webspaces
+nav:
+  - index.md
+  - environment.md
+  - guides
+  - internals
