@@ -86,7 +86,7 @@ config:
     shutdown: 30s
   iam:
     url: 'https://iam.netsoc.ie/v1'
-    allow_insecure: false
+    allow_insecure: true
   lxd:
     url: https://lxd8s
     tls:
