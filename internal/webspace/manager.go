@@ -270,11 +270,6 @@ func (m *Manager) onLxdEvent(e lxdApi.Event) {
 	m.Lock(uid)
 	defer m.Unlock(uid)
 
-	if err := m.traefik.ClearConfig(ctx, m.lxdInstanceName(uid)); err != nil {
-		log.WithField("uid", uid).WithError(err).Error("Failed to clear Traefik config")
-		return
-	}
-
 	all, err := m.GetAll()
 	if err != nil {
 		log.WithError(err).Error("Failed to get all webspaces")
@@ -337,6 +332,11 @@ func (m *Manager) onLxdEvent(e lxdApi.Event) {
 		"running": running,
 		"action":  action,
 	}).Debug("Updating Traefik / port forward config")
+
+	if err := m.traefik.ClearConfig(ctx, m.lxdInstanceName(uid)); err != nil {
+		log.WithField("uid", uid).WithError(err).Error("Failed to clear Traefik config")
+		return
+	}
 
 	if err := m.traefik.GenerateConfig(ctx, w, addr); err != nil {
 		log.WithField("user", w.UserID).WithError(err).Error("Failed to update Traefik config")
