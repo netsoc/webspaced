@@ -26,8 +26,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.8.1
 	github.com/traefik/traefik/v2 v2.5.0-rc2
-	golang.org/x/net v0.0.0-20210716203947-853a461950ff // indirect
-	golang.org/x/tools v0.1.5 // indirect
+	golang.org/x/net v0.7.0 // indirect
 	gopkg.in/httprequest.v1 v1.2.1 // indirect
 	gopkg.in/macaroon-bakery.v2 v2.3.0 // indirect
 	gopkg.in/robfig/cron.v2 v2.0.0-20150107220207-be2e0b0deed5 // indirect
